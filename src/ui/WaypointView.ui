@@ -302,10 +302,10 @@ QProgressBar::chunk#thrustBar {
          <enum>Qt::WheelFocus</enum>
         </property>
         <property name="toolTip">
-         <string>Position Y/Longitude coordinate</string>
+         <string>Position Y coordinate</string>
         </property>
         <property name="statusTip">
-         <string>Position Y/Longitude coordinate</string>
+         <string>Position Y coordinate</string>
         </property>
         <property name="prefix">
          <string>E </string>
@@ -342,7 +342,7 @@ QProgressBar::chunk#thrustBar {
          <string>Position Z coordinate (local frame, negative)</string>
         </property>
         <property name="statusTip">
-         <string/>
+         <string>Position Z coordinate (local frame, negative)</string>
         </property>
         <property name="prefix">
          <string>D </string>
