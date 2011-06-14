@@ -41,6 +41,7 @@ This file is part of the QGROUNDCONTROL project
 #include "Waypoint.h"
 #include "UASInterface.h"
 #include "WaypointView.h"
+#include "WaypointViewReadOnly.h"
 
 
 namespace Ui {
@@ -75,17 +76,27 @@ public slots:
     void addCurrentPositonWaypoint();
     /** @brief Add a waypoint by mouse click over the map */
 
+    //Waypoint read-only list operations
+    /** @brief Read the waypoint list from MAV to update the view tab */
+    void refreshReadOnly();
+
     //Update events
     /** @brief sets statusLabel string */
     void updateStatusLabel(const QString &string);
-    /** @brief The user wants to change the current waypoint */
+    /** @brief Requests UASWaypointManager to change the current waypoint on the MAV and in the view tab  */
     void changeCurrentWaypoint(quint16 seq);
-    /** @brief The waypoint planner changed the current waypoint */
+    /** @brief Requests UASWaypointManager to change the current waypoint in the edit tab  */
+    void changeCurrentWaypointEditOnly(quint16 seq);
+    /** @brief Requests UASWaypointManager to change AutoContinue value for a certain waypoint on the MAV */
+    void changeAutoContinue(quint16 seq, bool state);
+
     void currentWaypointChanged(quint16 seq);
     /** @brief The waypoint manager informs that one waypoint was changed */
     void updateWaypoint(int uas, Waypoint* wp);
     /** @brief The waypoint manager informs that the waypoint list was changed */
     void waypointListChanged(void);
+    /** @brief The waypoint manager informs that the waypoint view should be updated */
+    void waypointReadOnlyListChanged(void);
 
 //    /** @brief The MapWidget informs that a waypoint global was changed on the map */
 //    void waypointGlobalChanged(const QPointF coordinate, const int indexWP);
@@ -114,7 +125,9 @@ protected:
 
 protected:
     QMap<Waypoint*, WaypointView*> wpViews;
+    QMap<Waypoint*, WaypointViewReadOnly*> wpViewsReadOnly;
     QVBoxLayout* listLayout;
+    QVBoxLayout* readOnlyListLayout;
     UASInterface* uas;
     double mavX;
     double mavY;

@@ -870,6 +870,15 @@ void UAS::receiveMessage(LinkInterface* link, mavlink_message_t message)
             }
             break;
 
+        case MAVLINK_MSG_ID_COMMAND_ACK:
+            {
+                mavlink_command_ack_t cmda;
+                mavlink_msg_command_ack_decode(&message, &cmda);
+
+                waypointManager.handleCommandAck(message.sysid, message.compid, &cmda);
+            }
+            break;
+
         case MAVLINK_MSG_ID_LOCAL_POSITION_SETPOINT:
             {
                 mavlink_local_position_setpoint_t p;

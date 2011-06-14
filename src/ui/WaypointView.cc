@@ -120,6 +120,7 @@ void WaypointView::remove()
 
 void WaypointView::changedAutoContinue(int state)
 {
+    qDebug() << "Trof: WaypointView::changedAutoContinue(" << state << ") ID:" << wp->getId();
     if (state == 0)
         wp->setAutocontinue(false);
     else
@@ -354,11 +355,20 @@ void WaypointView::changedFrame(int index)
 
 void WaypointView::changedCurrent(int state)
 {
+    qDebug() << "Trof: WaypointView::changedCurrent(" << state << ") ID:" << wp->getId();
     if (state == 0)
     {
-        m_ui->selectedBox->setChecked(true);
-        m_ui->selectedBox->setCheckState(Qt::Checked);
-        wp->setCurrent(false);
+        if (wp->getCurrent() == true) //User clicked on the waypoint, that is already current
+        {
+            m_ui->selectedBox->setChecked(true);
+            m_ui->selectedBox->setCheckState(Qt::Checked);
+        }
+        else
+        {
+            m_ui->selectedBox->setChecked(false);
+            m_ui->selectedBox->setCheckState(Qt::Unchecked);
+            wp->setCurrent(false);
+        }
     }
     else
     {
@@ -369,6 +379,7 @@ void WaypointView::changedCurrent(int state)
 
 void WaypointView::updateValues()
 {
+    qDebug() << "Trof: WaypointView::updateValues() ID:" << wp->getId();
     // Check if we just lost the wp, delete the widget
     // accordingly
     if (!wp)
