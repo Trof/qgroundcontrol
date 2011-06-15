@@ -21,17 +21,20 @@
 #include "windows.h"
 #endif
 
+using namespace TNX;
 
-SerialLink::SerialLink(QString portname, BaudRateType baudrate, FlowType flow, ParityType parity, DataBitsType dataBits, StopBitsType stopBits) :
-        port(NULL)
+//#define USE_QEXTSERIAL // this allows us to revert to old serial library during transition
+
+SerialLink::SerialLink(QString portname, int baudRate, bool hardwareFlowControl, bool parity,
+                       int dataBits, int stopBits) :
+    port(NULL)
 {
     // Setup settings
     this->porthandle = portname.trimmed();
 #ifdef _WIN32
     // Port names above 20 need the network path format - if the port name is not already in this format
     // catch this special case
-    if (this->porthandle.size() > 0 && !this->porthandle.startsWith("\\"))
-    {
+    if (this->porthandle.size() > 0 && !this->porthandle.startsWith("\\")) {
         // Append \\.\ before the port handle. Additional backslashes are used for escaping.
         this->porthandle = "\\\\.\\" + this->porthandle;
     }
@@ -39,43 +42,35 @@ SerialLink::SerialLink(QString portname, BaudRateType baudrate, FlowType flow, P
     // Set unique ID and add link to the list of links
     this->id = getNextLinkId();
 
-    this->baudrate = baudrate;
-    this->flow = flow;
-    this->parity = parity;
-    this->dataBits = dataBits;
-    this->stopBits = stopBits;
-    this->timeout = 1; ///< The timeout controls how long the program flow should wait for new serial bytes. As we're polling, we don't want to wait at all.
+    setBaudRate(baudRate);
+    if (hardwareFlowControl)
+    {
+        portSettings.setFlowControl(QPortSettings::FLOW_HARDWARE);
+    }
+    else
+    {
+        portSettings.setFlowControl(QPortSettings::FLOW_OFF);
+    }
+    if (parity)
+    {
+        portSettings.setParity(QPortSettings::PAR_EVEN);
+    }
+    else
+    {
+        portSettings.setParity(QPortSettings::PAR_NONE);
+    }
+    setDataBits(dataBits);
+    setStopBits(stopBits);
 
     // Set the port name
     if (porthandle == "")
     {
-        //        name = tr("serial link ") + QString::number(getId()) + tr(" (unconfigured)");
         name = tr("Serial Link ") + QString::number(getId());
     }
     else
     {
         name = portname.trimmed();
     }
-
-#ifdef _WIN3232
-    // Windows 32bit & 64bit serial connection
-    winPort = CreateFile(porthandle,
-                         GENERIC_READ | GENERIC_WRITE,
-                         0,
-                         0,
-                         OPEN_EXISTING,
-                         FILE_ATTRIBUTE_NORMAL,
-                         0);
-    if(winPort==INVALID_HANDLE_VALUE){
-        if(GetLastError()==ERROR_FILE_NOT_FOUND){
-            //serial port does not exist. Inform user.
-        }
-        //some other error occurred. Inform user.
-    }
-#else
-
-#endif
-
     loadSettings();
 }
 
@@ -91,8 +86,7 @@ void SerialLink::loadSettings()
     // Load defaults from settings
     QSettings settings(QGC::COMPANYNAME, QGC::APPNAME);
     settings.sync();
-    if (settings.contains("SERIALLINK_COMM_PORT"))
-    {
+    if (settings.contains("SERIALLINK_COMM_PORT")) {
         if (porthandle == "") setPortName(settings.value("SERIALLINK_COMM_PORT").toString());
         setBaudRateType(settings.value("SERIALLINK_COMM_BAUD").toInt());
         setParityType(settings.value("SERIALLINK_COMM_PARITY").toInt());
@@ -126,8 +120,7 @@ void SerialLink::run()
     hardwareConnect();
 
     // Qt way to make clear what a while(1) loop does
-    forever
-    {
+    forever {
         // Check if new bytes have arrived, if yes, emit the notification signal
         checkForBytes();
         /* Serial data isn't arriving that fast normally, this saves the thread
@@ -141,33 +134,26 @@ void SerialLink::run()
 void SerialLink::checkForBytes()
 {
     /* Check if bytes are available */
-    if(port && port->isOpen() && port->isWritable())
-    {
+    if(port && port->isOpen() && port->isWritable()) {
         dataMutex.lock();
         qint64 available = port->bytesAvailable();
         dataMutex.unlock();
 
-        if(available > 0)
-        {
+        if(available > 0) {
             readBytes();
         }
-    }
-    else
-    {
+    } else {
         emit disconnected();
     }
 
 }
 
-
 void SerialLink::writeBytes(const char* data, qint64 size)
 {
-    if(port && port->isOpen())
-    {
+    if(port && port->isOpen()) {
         int b = port->write(data, size);
 
-        if (b > 0)
-        {
+        if (b > 0) {
 
 //            qDebug() << "Serial link " << this->getName() << "transmitted" << b << "bytes:";
 
@@ -181,9 +167,7 @@ void SerialLink::writeBytes(const char* data, qint64 size)
 //                qDebug("%02x ", v);
 //            }
 //            qDebug("\n");
-        }
-        else
-        {
+        } else {
             disconnect();
             // Error occured
             emit communicationError(this->getName(), tr("Could not send data - link %1 is disconnected!").arg(this->getName()));
@@ -200,14 +184,13 @@ void SerialLink::writeBytes(const char* data, qint64 size)
 void SerialLink::readBytes()
 {
     dataMutex.lock();
-    if(port && port->isOpen())
-    {
+    if(port && port->isOpen()) {
         const qint64 maxLength = 2048;
         char data[maxLength];
         qint64 numBytes = port->bytesAvailable();
+        //qDebug() << "numBytes: " << numBytes;
 
-        if(numBytes > 0)
-        {
+        if(numBytes > 0) {
             /* Read as much data in buffer as possible without overflow */
             if(maxLength < numBytes) numBytes = maxLength;
 
@@ -237,12 +220,9 @@ void SerialLink::readBytes()
  **/
 qint64 SerialLink::bytesAvailable()
 {
-    if (port)
-    {
+    if (port) {
         return port->bytesAvailable();
-    }
-    else
-    {
+    } else {
         return 0;
     }
 }
@@ -254,13 +234,13 @@ qint64 SerialLink::bytesAvailable()
  **/
 bool SerialLink::disconnect()
 {
-    if (port)
-    {
+    if (port) {
         //#if !defined _WIN32 || !defined _WIN64
         /* Block the thread until it returns from run() */
         //#endif
 //        dataMutex.lock();
-        port->flush();
+        port->flushInBuffer();
+        port->flushOutBuffer();
         port->close();
         delete port;
         port = NULL;
@@ -273,10 +253,8 @@ bool SerialLink::disconnect()
 
         emit disconnected();
         emit connected(false);
-        return ! closed;
-    }
-    else
-    {
+        return closed;
+    } else {
         // No port, so we're disconnected
         return true;
     }
@@ -290,15 +268,9 @@ bool SerialLink::disconnect()
  **/
 bool SerialLink::connect()
 {
-    if (!isConnected())
-    {
-        qDebug() << "CONNECTING LINK: " << __FILE__ << __LINE__ << "with settings" << porthandle << baudrate << dataBits << parity << stopBits;
-        if (!this->isRunning())
-        {
-            this->start(LowPriority);
-        }
-    }
-	return true;
+    if (this->isRunning()) this->disconnect();
+    this->start(LowPriority);
+    return true;
 }
 
 /**
@@ -311,29 +283,25 @@ bool SerialLink::connect()
  **/
 bool SerialLink::hardwareConnect()
 {
-    if(port)
-    {
+    if(port) {
         port->close();
         delete port;
     }
-    port = new QextSerialPort(porthandle, QextSerialPort::Polling);
-    QObject::connect(port, SIGNAL(aboutToClose()), this, SIGNAL(disconnected()));
-
-    port->open(QIODevice::ReadWrite);
-    port->setBaudRate(this->baudrate);
-    port->setParity(this->parity);
-    port->setStopBits(this->stopBits);
-    port->setDataBits(this->dataBits);
-    port->setTimeout(timeout); // Timeout of 0 ms, we don't want to wait for data, we just poll again next time
-
+    port = new QSerialPort(porthandle, portSettings);
+    QObject::connect(port,SIGNAL(aboutToClose()),this,SIGNAL(disconnected()));
+    port->setCommTimeouts(QSerialPort::CtScheme_NonBlockingRead);
     connectionStartTime = MG::TIME::getGroundTimeNow();
 
+    port->open();
+
     bool connectionUp = isConnected();
-    if(connectionUp)
-    {
+    if(connectionUp) {
         emit connected();
         emit connected(true);
     }
+
+    qDebug() << "CONNECTING LINK: " << __FILE__ << __LINE__ << "with settings" << port->portName() << getBaudRate() << getDataBits() << getParityType() << getStopBits();
+
 
     writeSettings();
 
@@ -348,12 +316,9 @@ bool SerialLink::hardwareConnect()
  **/
 bool SerialLink::isConnected()
 {
-    if (port)
-    {
+    if (port) {
         return port->isOpen();
-    }
-    else
-    {
+    } else {
         return false;
     }
 }
@@ -378,80 +343,92 @@ void SerialLink::setName(QString name)
 qint64 SerialLink::getNominalDataRate()
 {
     qint64 dataRate = 0;
-    switch (baudrate)
-    {
-    case BAUD50:
+    switch (portSettings.baudRate()) {
+    case QPortSettings::BAUDR_50:
         dataRate = 50;
         break;
-    case BAUD75:
+    case QPortSettings::BAUDR_75:
         dataRate = 75;
         break;
-    case BAUD110:
+    case QPortSettings::BAUDR_110:
         dataRate = 110;
         break;
-    case BAUD134:
+    case QPortSettings::BAUDR_134:
         dataRate = 134;
         break;
-    case BAUD150:
+    case QPortSettings::BAUDR_150:
         dataRate = 150;
         break;
-    case BAUD200:
+    case QPortSettings::BAUDR_200:
         dataRate = 200;
         break;
-    case BAUD300:
+    case QPortSettings::BAUDR_300:
         dataRate = 300;
         break;
-    case BAUD600:
+    case QPortSettings::BAUDR_600:
         dataRate = 600;
         break;
-    case BAUD1200:
+    case QPortSettings::BAUDR_1200:
         dataRate = 1200;
         break;
-    case BAUD1800:
+    case QPortSettings::BAUDR_1800:
         dataRate = 1800;
         break;
-    case BAUD2400:
+    case QPortSettings::BAUDR_2400:
         dataRate = 2400;
         break;
-    case BAUD4800:
+    case QPortSettings::BAUDR_4800:
         dataRate = 4800;
         break;
-    case BAUD9600:
+    case QPortSettings::BAUDR_9600:
         dataRate = 9600;
         break;
-    case BAUD14400:
+#ifdef Q_OS_WIN
+    case QPortSettings::BAUDR_14400:
         dataRate = 14400;
         break;
-    case BAUD19200:
+#endif
+    case QPortSettings::BAUDR_19200:
         dataRate = 19200;
         break;
-    case BAUD38400:
+    case QPortSettings::BAUDR_38400:
         dataRate = 38400;
         break;
-    case BAUD56000:
+#ifdef Q_OS_WIN
+    case QPortSettings::BAUDR_56000:
         dataRate = 56000;
         break;
-    case BAUD57600:
+#endif
+    case QPortSettings::BAUDR_57600:
         dataRate = 57600;
         break;
-    case BAUD76800:
+#ifdef Q_OS_WIN
+    case QPortSettings::BAUDR_76800:
         dataRate = 76800;
         break;
-    case BAUD115200:
+#endif
+    case QPortSettings::BAUDR_115200:
         dataRate = 115200;
         break;
-    case BAUD128000:
+#ifdef Q_OS_WIN
+        // Windows-specific high-end baudrates
+    case QPortSettings::BAUDR_128000:
         dataRate = 128000;
         break;
-    case BAUD256000:
+    case QPortSettings::BAUDR_256000:
         dataRate = 256000;
-        // Windows-specific high-end baudrates
-    case BAUD230400:
+    case QPortSettings::BAUDR_230400:
         dataRate = 230400;
-    case BAUD460800:
+    case QPortSettings::BAUDR_460800:
         dataRate = 460800;
-    case BAUD921600:
+#endif
+        // All-OS high-speed
+    case QPortSettings::BAUDR_921600:
         dataRate = 921600;
+        break;
+    case QPortSettings::BAUDR_UNKNOWN:
+        default:
+        // Do nothing
         break;
     }
     return dataRate;
@@ -525,48 +502,47 @@ int SerialLink::getBaudRate()
 
 int SerialLink::getBaudRateType()
 {
-    return baudrate;
+    return portSettings.baudRate();
 }
 
 int SerialLink::getFlowType()
 {
-    return flow;
+    return portSettings.flowControl();
 }
 
 int SerialLink::getParityType()
 {
-    return parity;
+    return portSettings.parity();
 }
 
 int SerialLink::getDataBitsType()
 {
-    return dataBits;
+    return portSettings.dataBits();
 }
 
 int SerialLink::getStopBitsType()
 {
-    return stopBits;
+    return portSettings.stopBits();
 }
 
 int SerialLink::getDataBits()
 {
-    int ret;
-    switch (dataBits)
-    {
-    case DATA_5:
+    int ret = -1;
+    switch (portSettings.dataBits()) {
+    case QPortSettings::DB_5:
         ret = 5;
         break;
-    case DATA_6:
+    case QPortSettings::DB_6:
         ret = 6;
         break;
-    case DATA_7:
+    case QPortSettings::DB_7:
         ret = 7;
         break;
-    case DATA_8:
+    case QPortSettings::DB_8:
         ret = 8;
         break;
     default:
-        ret = 0;
+        ret = -1;
         break;
     }
     return ret;
@@ -574,26 +550,24 @@ int SerialLink::getDataBits()
 
 int SerialLink::getStopBits()
 {
-    int ret;
-    switch (stopBits)
-    {
-    case STOP_1:
-        ret = 1;
-        break;
-    case STOP_2:
-        ret = 2;
-        break;
-    default:
-        ret = 0;
-        break;
-    }
+    int ret = -1;
+        switch (portSettings.stopBits()) {
+        case QPortSettings::STOP_1:
+            ret = 1;
+            break;
+        case QPortSettings::STOP_2:
+            ret = 2;
+            break;
+        default:
+            ret = -1;
+            break;
+        }
     return ret;
 }
 
 bool SerialLink::setPortName(QString portName)
 {
-    if(portName.trimmed().length() > 0)
-    {
+    if(portName.trimmed().length() > 0) {
         bool reconnect = false;
         if (isConnected()) reconnect = true;
         disconnect();
@@ -603,8 +577,7 @@ bool SerialLink::setPortName(QString portName)
 #ifdef _WIN32
         // Port names above 20 need the network path format - if the port name is not already in this format
         // catch this special case
-        if (!this->porthandle.startsWith("\\"))
-        {
+        if (!this->porthandle.startsWith("\\")) {
             // Append \\.\ before the port handle. Additional backslashes are used for escaping.
             this->porthandle = "\\\\.\\" + this->porthandle;
         }
@@ -612,9 +585,7 @@ bool SerialLink::setPortName(QString portName)
 
         if(reconnect) connect();
         return true;
-    }
-    else
-    {
+    } else {
         return false;
     }
 }
@@ -627,180 +598,117 @@ bool SerialLink::setBaudRateType(int rateIndex)
     if(isConnected()) reconnect = true;
     disconnect();
 
-    switch (rateIndex) {
-    case 0:
-        baudrate = BAUD50;
-        break;
-    case 1:
-        baudrate = BAUD75;
-        break;
-    case 2:
-        baudrate = BAUD110;
-        break;
-    case 3:
-        baudrate = BAUD134;
-        break;
-    case 4:
-        baudrate = BAUD150;
-        break;
-    case 5:
-        baudrate = BAUD200;
-        break;
-    case 6:
-        baudrate = BAUD300;
-        break;
-    case 7:
-        baudrate = BAUD600;
-        break;
-    case 8:
-        baudrate = BAUD1200;
-        break;
-    case 9:
-        baudrate = BAUD1800;
-        break;
-    case 10:
-        baudrate = BAUD2400;
-        break;
-    case 11:
-        baudrate = BAUD4800;
-        break;
-    case 12:
-        baudrate = BAUD9600;
-        break;
-    case 13:
-        baudrate = BAUD14400;
-        break;
-    case 14:
-        baudrate = BAUD19200;
-        break;
-    case 15:
-        baudrate = BAUD38400;
-        break;
-    case 16:
-        baudrate = BAUD56000;
-        break;
-    case 17:
-        baudrate = BAUD57600;
-        break;
-    case 18:
-        baudrate = BAUD76800;
-        break;
-    case 19:
-        baudrate = BAUD115200;
-        break;
-    case 20:
-        baudrate = BAUD128000;
-        break;
-    case 21:
-        baudrate = BAUD230400;
-        break;
-    case 22:
-        baudrate = BAUD256000;
-        break;
-    case 23:
-        baudrate = BAUD460800;
-        break;
-    case 24:
-        baudrate = BAUD921600;
-        break;
-    default:
-        // If none of the above cases matches, there must be an error
-        accepted = false;
-        break;
+    if (rateIndex >= (int)QPortSettings::BAUDR_50 && rateIndex <= (int)QPortSettings::BAUDR_921600)
+    {
+        portSettings.setBaudRate((QPortSettings::BaudRate)rateIndex);
     }
 
     if(reconnect) connect();
     return accepted;
 }
 
-
+bool SerialLink::setBaudRateString(const QString& rate)
+{
+    bool ok;
+    int intrate = rate.toInt(&ok);
+    if (!ok) return false;
+    return setBaudRate(intrate);
+}
 
 bool SerialLink::setBaudRate(int rate)
 {
+    qDebug() << "BAUD RATE:" << rate;
+
     bool reconnect = false;
     bool accepted = true; // This is changed if none of the data rates matches
-    if(isConnected())
-    {
+    if(isConnected()) {
         reconnect = true;
     }
     disconnect();
 
-    switch (rate)
-    {
+    switch (rate) {
     case 50:
-        baudrate = BAUD50;
+        portSettings.setBaudRate(QPortSettings::BAUDR_50);
         break;
     case 75:
-        baudrate = BAUD75;
+        portSettings.setBaudRate(QPortSettings::BAUDR_75);
         break;
     case 110:
-        baudrate = BAUD110;
+        portSettings.setBaudRate(QPortSettings::BAUDR_110);
         break;
     case 134:
-        baudrate = BAUD134;
+        portSettings.setBaudRate(QPortSettings::BAUDR_134);
         break;
     case 150:
-        baudrate = BAUD150;
+        portSettings.setBaudRate(QPortSettings::BAUDR_150);
         break;
     case 200:
-        baudrate = BAUD200;
+        portSettings.setBaudRate(QPortSettings::BAUDR_200);
         break;
     case 300:
-        baudrate = BAUD300;
+        portSettings.setBaudRate(QPortSettings::BAUDR_300);
         break;
     case 600:
-        baudrate = BAUD600;
+        portSettings.setBaudRate(QPortSettings::BAUDR_600);
         break;
     case 1200:
-        baudrate = BAUD1200;
+        portSettings.setBaudRate(QPortSettings::BAUDR_1200);
         break;
     case 1800:
-        baudrate = BAUD1800;
+        portSettings.setBaudRate(QPortSettings::BAUDR_1800);
         break;
     case 2400:
-        baudrate = BAUD2400;
+        portSettings.setBaudRate(QPortSettings::BAUDR_2400);
         break;
     case 4800:
-        baudrate = BAUD4800;
+        portSettings.setBaudRate(QPortSettings::BAUDR_4800);
         break;
     case 9600:
-        baudrate = BAUD9600;
+        portSettings.setBaudRate(QPortSettings::BAUDR_9600);
         break;
+#ifdef Q_OS_WIN
     case 14400:
-        baudrate = BAUD14400;
+        portSettings.setBaudRate(QPortSettings::BAUDR_14400);
         break;
+#endif
     case 19200:
-        baudrate = BAUD19200;
+        portSettings.setBaudRate(QPortSettings::BAUDR_19200);
         break;
     case 38400:
-        baudrate = BAUD38400;
+        portSettings.setBaudRate(QPortSettings::BAUDR_38400);
         break;
+#ifdef Q_OS_WIN
     case 56000:
-        baudrate = BAUD56000;
+        portSettings.setBaudRate(QPortSettings::BAUDR_56000);
         break;
+#endif
     case 57600:
-        baudrate = BAUD57600;
+        portSettings.setBaudRate(QPortSettings::BAUDR_57600);
         break;
+#ifdef Q_OS_WIN
     case 76800:
-        baudrate = BAUD76800;
+        portSettings.setBaudRate(QPortSettings::BAUDR_76800);
         break;
+#endif
     case 115200:
-        baudrate = BAUD115200;
+        portSettings.setBaudRate(QPortSettings::BAUDR_115200);
         break;
+#ifdef Q_OS_WIN
     case 128000:
-        baudrate = BAUD128000;
+        portSettings.setBaudRate(QPortSettings::BAUDR_128000);
         break;
     case 230400:
-        baudrate = BAUD230400;
+        portSettings.setBaudRate(QPortSettings::BAUDR_230400);
         break;
     case 256000:
-        baudrate = BAUD256000;
+        portSettings.setBaudRate(QPortSettings::BAUDR_256000);
         break;
     case 460800:
-        baudrate = BAUD460800;
+        portSettings.setBaudRate(QPortSettings::BAUDR_460800);
         break;
+#endif
     case 921600:
-        baudrate = BAUD921600;
+        portSettings.setBaudRate(QPortSettings::BAUDR_921600);
         break;
     default:
         // If none of the above cases matches, there must be an error
@@ -820,16 +728,15 @@ bool SerialLink::setFlowType(int flow)
     if(isConnected()) reconnect = true;
     disconnect();
 
-    switch (flow)
-    {
-    case FLOW_OFF:
-        this->flow = FLOW_OFF;
+    switch (flow) {
+    case (int)QPortSettings::FLOW_OFF:
+        portSettings.setFlowControl(QPortSettings::FLOW_OFF);
         break;
-    case FLOW_HARDWARE:
-        this->flow = FLOW_HARDWARE;
+    case (int)QPortSettings::FLOW_HARDWARE:
+        portSettings.setFlowControl(QPortSettings::FLOW_HARDWARE);
         break;
-    case FLOW_XONXOFF:
-        this->flow = FLOW_XONXOFF;
+    case (int)QPortSettings::FLOW_XONXOFF:
+        portSettings.setFlowControl(QPortSettings::FLOW_XONXOFF);
         break;
     default:
         // If none of the above cases matches, there must be an error
@@ -848,22 +755,18 @@ bool SerialLink::setParityType(int parity)
     if (isConnected()) reconnect = true;
     disconnect();
 
-    switch (parity)
-    {
-    case (int)PAR_NONE:
-        this->parity = PAR_NONE;
+    switch (parity) {
+    case (int)QPortSettings::PAR_NONE:
+        portSettings.setParity(QPortSettings::PAR_NONE);
         break;
-    case (int)PAR_ODD:
-        this->parity = PAR_ODD;
+    case (int)QPortSettings::PAR_ODD:
+        portSettings.setParity(QPortSettings::PAR_ODD);
         break;
-    case (int)PAR_EVEN:
-        this->parity = PAR_EVEN;
+    case (int)QPortSettings::PAR_EVEN:
+        portSettings.setParity(QPortSettings::PAR_EVEN);
         break;
-    case (int)PAR_MARK:
-        this->parity = PAR_MARK;
-        break;
-    case (int)PAR_SPACE:
-        this->parity = PAR_SPACE;
+    case (int)QPortSettings::PAR_SPACE:
+        portSettings.setParity(QPortSettings::PAR_SPACE);
         break;
     default:
         // If none of the above cases matches, there must be an error
@@ -878,24 +781,24 @@ bool SerialLink::setParityType(int parity)
 
 bool SerialLink::setDataBits(int dataBits)
 {
+    qDebug() << "Setting" << dataBits << "data bits";
     bool reconnect = false;
     if (isConnected()) reconnect = true;
     bool accepted = true;
     disconnect();
 
-    switch (dataBits)
-    {
+    switch (dataBits) {
     case 5:
-        this->dataBits = DATA_5;
+        portSettings.setDataBits(QPortSettings::DB_5);
         break;
     case 6:
-        this->dataBits = DATA_6;
+        portSettings.setDataBits(QPortSettings::DB_6);
         break;
     case 7:
-        this->dataBits = DATA_7;
+        portSettings.setDataBits(QPortSettings::DB_7);
         break;
     case 8:
-        this->dataBits = DATA_8;
+        portSettings.setDataBits(QPortSettings::DB_8);
         break;
     default:
         // If none of the above cases matches, there must be an error
@@ -915,13 +818,12 @@ bool SerialLink::setStopBits(int stopBits)
     if(isConnected()) reconnect = true;
     disconnect();
 
-    switch (stopBits)
-    {
+    switch (stopBits) {
     case 1:
-        this->stopBits = STOP_1;
+        portSettings.setStopBits(QPortSettings::STOP_1);
         break;
     case 2:
-        this->stopBits = STOP_2;
+        portSettings.setStopBits(QPortSettings::STOP_2);
         break;
     default:
         // If none of the above cases matches, there must be an error
@@ -941,9 +843,8 @@ bool SerialLink::setDataBitsType(int dataBits)
     if (isConnected()) reconnect = true;
     disconnect();
 
-    if (dataBits >= (int)DATA_5 && dataBits <= (int)DATA_8)
-    {
-        this->dataBits = (DataBitsType) dataBits;
+    if (dataBits >= (int)QPortSettings::DB_5 && dataBits <= (int)QPortSettings::DB_8) {
+        portSettings.setDataBits((QPortSettings::DataBits) dataBits);
 
         if(reconnect) connect();
         accepted = true;
@@ -959,11 +860,10 @@ bool SerialLink::setStopBitsType(int stopBits)
     if(isConnected()) reconnect = true;
     disconnect();
 
-    if (stopBits >= (int)STOP_1 && dataBits <= (int)STOP_2)
-    {
-        StopBitsType newBits = (StopBitsType) stopBits;
+    if (stopBits >= (int)QPortSettings::STOP_1 && stopBits <= (int)QPortSettings::STOP_2) {
+        portSettings.setStopBits((QPortSettings::StopBits) stopBits);
 
-        port->setStopBits(newBits);
+        if(reconnect) connect();
         accepted = true;
     }
 

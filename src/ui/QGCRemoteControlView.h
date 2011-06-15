@@ -36,15 +36,17 @@ This file is part of the QGROUNDCONTROL project
 
 #include "RadioCalibration/RadioCalibrationWindow.h"
 
-namespace Ui {
-    class QGCRemoteControlView;
+namespace Ui
+{
+class QGCRemoteControlView;
 }
 
 class QVBoxLayout;
 class QLabel;
 class QProgressBar;
 
-class QGCRemoteControlView : public QWidget {
+class QGCRemoteControlView : public QWidget
+{
     Q_OBJECT
 public:
     QGCRemoteControlView(QWidget *parent = 0);
@@ -53,7 +55,7 @@ public:
 public slots:
     void setUASId(int id);
     void setChannelRaw(int channelId, float raw);
-    void setChannelScaled(int channelId, float normalized);
+    //void setChannelScaled(int channelId, float normalized);
     void setRemoteRSSI(float rssiNormalized);
     void redraw();
 

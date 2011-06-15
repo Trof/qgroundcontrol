@@ -70,35 +70,37 @@ This file is part of the QGROUNDCONTROL project
 #include "SlugsDataSensorView.h"
 #include "LogCompressor.h"
 
-#include "SlugsPIDControl.h"
-
 #include "SlugsHilSim.h"
 
-#include "SlugsVideoCamControl.h"
-
+#include "SlugsPadCameraControl.h"
+#include "UASControlParameters.h"
 
 /**
  * @brief Main Application Window
  *
  **/
-class MainWindow : public QMainWindow {
+class MainWindow : public QMainWindow
+{
     Q_OBJECT
 
 public:
     static MainWindow* instance();
     ~MainWindow();
 
-    enum QGC_MAINWINDOW_STYLE
-    {
+    enum QGC_MAINWINDOW_STYLE {
         QGC_MAINWINDOW_STYLE_NATIVE,
         QGC_MAINWINDOW_STYLE_INDOOR,
         QGC_MAINWINDOW_STYLE_OUTDOOR
     };
 
     /** @brief Get current visual style */
-    int getStyle() { return currentStyle; }
+    int getStyle() {
+        return currentStyle;
+    }
     /** @brief Get auto link reconnect setting */
-    bool autoReconnectEnabled() { return autoReconnect; }
+    bool autoReconnectEnabled() {
+        return autoReconnect;
+    }
 
 public slots:
 //    /** @brief Store the mainwindow settings */
@@ -121,6 +123,7 @@ public slots:
     void configure();
     /** @brief Set the currently controlled UAS */
     void setActiveUAS(UASInterface* uas);
+
     /** @brief Add a new UAS */
     void UASCreated(UASInterface* uas);
     /** @brief Update system specs of a UAS */
@@ -211,55 +214,54 @@ protected:
     // FIXME: DO NOT PUT CUSTOM VALUES IN THIS ENUM since it is iterated over
     // this will be fixed in a future release.
     typedef enum _TOOLS_WIDGET_NAMES {
-      MENU_UAS_CONTROL,
-      MENU_UAS_INFO,
-      MENU_CAMERA,
-      MENU_UAS_LIST,
-      MENU_WAYPOINTS,
-      MENU_STATUS,
-      MENU_DETECTION,
-      MENU_DEBUG_CONSOLE,
-      MENU_PARAMETERS,
-      MENU_HDD_1,
-      MENU_HDD_2,
-      MENU_WATCHDOG,
-      MENU_HUD,
-      MENU_HSI,
-      MENU_RC_VIEW,
-      MENU_SLUGS_DATA,
-      MENU_SLUGS_PID,
-      MENU_SLUGS_HIL,
-      MENU_SLUGS_CAMERA,
-      MENU_MAVLINK_LOG_PLAYER,
-      MENU_VIDEO_STREAM_1,
-      MENU_VIDEO_STREAM_2,
-      CENTRAL_SEPARATOR= 255, // do not change
-      CENTRAL_LINECHART,
-      CENTRAL_PROTOCOL,
-      CENTRAL_MAP,
-      CENTRAL_3D_LOCAL,
-      CENTRAL_3D_MAP,
-      CENTRAL_OSGEARTH,
-      CENTRAL_GOOGLE_EARTH,
-      CENTRAL_HUD,
-      CENTRAL_DATA_PLOT,
+        MENU_UAS_CONTROL_PARAM,
+        MENU_UAS_CONTROL,
+        MENU_UAS_INFO,
+        MENU_CAMERA,
+        MENU_UAS_LIST,
+        MENU_WAYPOINTS,
+        MENU_STATUS,
+        MENU_DETECTION,
+        MENU_DEBUG_CONSOLE,
+        MENU_PARAMETERS,
+        MENU_HDD_1,
+        MENU_HDD_2,
+        MENU_WATCHDOG,
+        MENU_HUD,
+        MENU_HSI,
+        MENU_RC_VIEW,
+        MENU_SLUGS_DATA,
+        MENU_SLUGS_PID,
+        MENU_SLUGS_HIL,
+        MENU_SLUGS_CAMERA,
+        MENU_MAVLINK_LOG_PLAYER,
+        MENU_VIDEO_STREAM_1,
+        MENU_VIDEO_STREAM_2,
+        CENTRAL_SEPARATOR= 255, // do not change
+        CENTRAL_LINECHART,
+        CENTRAL_PROTOCOL,
+        CENTRAL_MAP,
+        CENTRAL_3D_LOCAL,
+        CENTRAL_3D_MAP,
+        CENTRAL_OSGEARTH,
+        CENTRAL_GOOGLE_EARTH,
+        CENTRAL_HUD,
+        CENTRAL_DATA_PLOT,
 
-    }TOOLS_WIDGET_NAMES;
+    } TOOLS_WIDGET_NAMES;
 
-    typedef enum _SETTINGS_SECTIONS
-    {
-      SECTION_MENU,
-      SUB_SECTION_CHECKED,
-      SUB_SECTION_LOCATION,
+    typedef enum _SETTINGS_SECTIONS {
+        SECTION_MENU,
+        SUB_SECTION_CHECKED,
+        SUB_SECTION_LOCATION,
     } SETTINGS_SECTIONS;
 
-    typedef enum _VIEW_SECTIONS
-    {
-      VIEW_ENGINEER,
-      VIEW_OPERATOR,
-      VIEW_PILOT,
-      VIEW_MAVLINK,
-      VIEW_UNCONNECTED,    ///< View in unconnected mode, when no UAS is available
+    typedef enum _VIEW_SECTIONS {
+        VIEW_ENGINEER,
+        VIEW_OPERATOR,
+        VIEW_PILOT,
+        VIEW_MAVLINK,
+        VIEW_UNCONNECTED,    ///< View in unconnected mode, when no UAS is available
     } VIEW_SECTIONS;
 
 
@@ -369,17 +371,18 @@ protected:
     QPointer<MapWidget> mapWidget;
     QPointer<XMLCommProtocolWidget> protocolWidget;
     QPointer<QGCDataPlot2D> dataplotWidget;
-    #ifdef QGC_OSG_ENABLED
+#ifdef QGC_OSG_ENABLED
     QPointer<QWidget> _3DWidget;
-    #endif
-    #ifdef QGC_OSGEARTH_ENABLED
+#endif
+#ifdef QGC_OSGEARTH_ENABLED
     QPointer<QWidget> _3DMapWidget;
-    #endif
+#endif
 #if (defined _MSC_VER) || (defined Q_OS_MAC)
     QPointer<QGCGoogleEarthView> gEarthWidget;
 #endif
     // Dock widgets
     QPointer<QDockWidget> controlDockWidget;
+    QPointer<QDockWidget> controlParameterWidget;
     QPointer<QDockWidget> infoDockWidget;
     QPointer<QDockWidget> cameraDockWidget;
     QPointer<QDockWidget> listDockWidget;
@@ -400,7 +403,6 @@ protected:
     QPointer<QDockWidget> rcViewDockWidget;
     QPointer<QDockWidget> hudDockWidget;
     QPointer<QDockWidget> slugsDataWidget;
-    QPointer<QDockWidget> slugsPIDControlWidget;
     QPointer<QDockWidget> slugsHilSimWidget;
     QPointer<QDockWidget> slugsCamControlWidget;
 
@@ -426,6 +428,7 @@ protected:
     QString styleFileName;
     bool autoReconnect;
     QGC_MAINWINDOW_STYLE currentStyle;
+    Qt::WindowStates windowStateVal;
 
 private:
     Ui::MainWindow ui;

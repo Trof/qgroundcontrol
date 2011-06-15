@@ -20,7 +20,7 @@ This file is part of the QGROUNDCONTROL project
     along with QGROUNDCONTROL. If not, see <http://www.gnu.org/licenses/>.
 
 ======================================================================*/
- 
+
 /**
  * @file
  *   @brief Brief Description
@@ -36,7 +36,7 @@ This file is part of the QGROUNDCONTROL project
 #include <QThread>
 #include <QMutex>
 #include <QString>
-#include <qextserialport.h>
+#include "qserialport.h"
 #include <configuration.h>
 #include "SerialLinkInterface.h"
 #ifdef _WIN32
@@ -52,12 +52,18 @@ This file is part of the QGROUNDCONTROL project
  * safe.
  *
  */
-class SerialLink : public SerialLinkInterface {
+class SerialLink : public SerialLinkInterface
+{
     Q_OBJECT
     //Q_INTERFACES(SerialLinkInterface:LinkInterface)
 
 public:
-    SerialLink(QString portname = "", BaudRateType baudrate=BAUD57600, FlowType flow=FLOW_OFF, ParityType parity=PAR_NONE, DataBitsType dataBits=DATA_8, StopBitsType stopBits=STOP_1);
+    SerialLink(QString portname = "",
+               int baudrate=57600,
+               bool flow=false,
+               bool parity=false,
+               int dataBits=8,
+               int stopBits=1);
     ~SerialLink();
 
     static const int poll_interval = SERIAL_POLL_INTERVAL; ///< Polling interval, defined in configuration.h
@@ -110,6 +116,9 @@ public slots:
     bool setDataBits(int dataBits);
     bool setStopBits(int stopBits);
 
+    // Set string rate
+    bool setBaudRateString(const QString& rate);
+
     // Set ENUM values
     bool setBaudRateType(int rateIndex);
     bool setFlowType(int flow);
@@ -132,18 +141,14 @@ protected slots:
     void checkForBytes();
 
 protected:
-    QextSerialPort* port;
+    TNX::QSerialPort * port;
+    TNX::QPortSettings portSettings;
 #ifdef _WIN32
     HANDLE winPort;
     DCB winPortSettings;
 #endif
     QString porthandle;
     QString name;
-    BaudRateType baudrate;
-    FlowType flow;
-    ParityType parity;
-    DataBitsType dataBits;
-    StopBitsType stopBits;
     int timeout;
     int id;
 
@@ -163,7 +168,7 @@ protected:
     bool hardwareConnect();
 
 signals:
-    // Signals are defined by LinkInterface
+    void aboutToCloseFlag();
 
 };
 

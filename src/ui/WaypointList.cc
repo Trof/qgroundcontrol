@@ -41,13 +41,13 @@ This file is part of the PIXHAWK project
 #include <QMouseEvent>
 
 WaypointList::WaypointList(QWidget *parent, UASInterface* uas) :
-        QWidget(parent),
-        uas(NULL),
-        mavX(0.0),
-        mavY(0.0),
-        mavZ(0.0),
-        mavYaw(0.0),
-        m_ui(new Ui::WaypointList)
+    QWidget(parent),
+    uas(NULL),
+    mavX(0.0),
+    mavY(0.0),
+    mavZ(0.0),
+    mavYaw(0.0),
+    m_ui(new Ui::WaypointList)
 {
     m_ui->setupUi(this);
 
@@ -128,8 +128,7 @@ void WaypointList::updateAttitude(UASInterface* uas, double roll, double pitch, 
 
 void WaypointList::setUAS(UASInterface* uas)
 {
-    if (this->uas == NULL && uas != NULL)
-    {
+    if (this->uas == NULL && uas != NULL) {
         this->uas = uas;
 
         connect(uas, SIGNAL(localPositionChanged(UASInterface*,double,double,double,quint64)),  this, SLOT(updatePosition(UASInterface*,double,double,double,quint64)));
@@ -148,8 +147,7 @@ void WaypointList::setUAS(UASInterface* uas)
 
 void WaypointList::saveWaypoints()
 {
-    if (uas)
-    {
+    if (uas) {
         QString fileName = QFileDialog::getSaveFileName(this, tr("Save File"), "./waypoints.txt", tr("Waypoint File (*.txt)"));
         uas->getWaypointManager()->saveWaypoints(fileName);
     }
@@ -157,8 +155,7 @@ void WaypointList::saveWaypoints()
 
 void WaypointList::loadWaypoints()
 {
-    if (uas)
-    {
+    if (uas) {
         QString fileName = QFileDialog::getOpenFileName(this, tr("Load File"), ".", tr("Waypoint File (*.txt)"));
         uas->getWaypointManager()->loadWaypoints(fileName);
     }
@@ -166,16 +163,14 @@ void WaypointList::loadWaypoints()
 
 void WaypointList::transmit()
 {
-    if (uas)
-    {
+    if (uas) {
         uas->getWaypointManager()->writeWaypoints();
     }
 }
 
 void WaypointList::read()
 {
-    if (uas)
-    {
+    if (uas) {
         uas->getWaypointManager()->readWaypoints();
     }
 }
@@ -190,22 +185,18 @@ void WaypointList::refreshReadOnly()
 
 void WaypointList::add()
 {
-    if (uas)
-    {
+    if (uas) {
         const QVector<Waypoint *> &waypoints = uas->getWaypointManager()->getWaypointList();
         Waypoint *wp;
 
 
-        if (waypoints.size() > 0)
-        {
+        if (waypoints.size() > 0) {
             // Create waypoint with last frame
             Waypoint *last = waypoints.at(waypoints.size()-1);
             wp = new Waypoint(0, last->getX(), last->getY(), last->getZ(), last->getParam1(), last->getParam2(), last->getParam3(), last->getParam4(),
                               last->getAutoContinue(), false, last->getFrame(), last->getAction());
             uas->getWaypointManager()->addWaypoint(wp);
-        }
-        else
-        {
+        } else {
             // Create global frame waypoint per default
             wp = new Waypoint(0, uas->getLatitude(), uas->getLongitude(), uas->getAltitude(), 0.0, 0.0, 0.0, 0.0, true, true, MAV_FRAME_GLOBAL, MAV_CMD_NAV_WAYPOINT);
             uas->getWaypointManager()->addWaypoint(wp);
@@ -259,8 +250,7 @@ void WaypointList::changeCurrentWaypointEditOnly(quint16 seq)
 
 void WaypointList::changeCurrentWaypoint(quint16 seq)
 {
-    if (uas)
-    {
+    if (uas) {
         uas->getWaypointManager()->setCurrentWaypoint(seq);
     }
 }
@@ -275,22 +265,16 @@ void WaypointList::changeAutoContinue(quint16 seq, bool state)
 
 void WaypointList::currentWaypointChanged(quint16 seq)
 {
-    if (uas)
-    {
+    if (uas) {
         const QVector<Waypoint *> &waypoints = uas->getWaypointManager()->getWaypointReadOnlyList();
 
-        if (seq < waypoints.size())
-        {
-            for(int i = 0; i < waypoints.size(); i++)
-            {
+        if (seq < waypoints.size()) {
+            for(int i = 0; i < waypoints.size(); i++) {
                 WaypointViewReadOnly* widget = wpViewsReadOnly.find(waypoints[i]).value();
 
-                if (waypoints[i]->getId() == seq)
-                {
+                if (waypoints[i]->getId() == seq) {
                     widget->setCurrent(true);
-                }
-                else
-                {
+                } else {
                     widget->setCurrent(false);
                 }
             }
@@ -308,31 +292,25 @@ void WaypointList::updateWaypoint(int uas, Waypoint* wp)
 
 void WaypointList::waypointListChanged()
 {
-    qDebug() << "Trof: WaypointList::waypointListChanged()";
     if (uas)
     {
         // Prevent updates to prevent visual flicker
         this->setUpdatesEnabled(false);
         const QVector<Waypoint *> &waypoints = uas->getWaypointManager()->getWaypointList();
 
-        if (!wpViews.empty())
-        {
+        if (!wpViews.empty()) {
             QMapIterator<Waypoint*,WaypointView*> viewIt(wpViews);
             viewIt.toFront();
-            while(viewIt.hasNext())
-            {
+            while(viewIt.hasNext()) {
                 viewIt.next();
                 Waypoint *cur = viewIt.key();
                 int i;
-                for (i = 0; i < waypoints.size(); i++)
-                {
-                    if (waypoints[i] == cur)
-                    {
+                for (i = 0; i < waypoints.size(); i++) {
+                    if (waypoints[i] == cur) {
                         break;
                     }
                 }
-                if (i == waypoints.size())
-                {
+                if (i == waypoints.size()) {
                     WaypointView* widget = wpViews.find(cur).value();
                     widget->hide();
                     listLayout->removeWidget(widget);
@@ -342,11 +320,9 @@ void WaypointList::waypointListChanged()
         }
 
         // then add/update the views for each waypoint in the list
-        for(int i = 0; i < waypoints.size(); i++)
-        {
+        for(int i = 0; i < waypoints.size(); i++) {
             Waypoint *wp = waypoints[i];
-            if (!wpViews.contains(wp))
-            {
+            if (!wpViews.contains(wp)) {
                 //edit tab
                 WaypointView* wpview = new WaypointView(wp, this);
                 wpViews.insert(wp, wpview);
@@ -360,8 +336,7 @@ void WaypointList::waypointListChanged()
             WaypointView *wpv = wpViews.value(wp);
 
             //check if ordering has changed
-            if(listLayout->itemAt(i)->widget() != wpv)
-            {
+            if(listLayout->itemAt(i)->widget() != wpv) {
                 listLayout->removeWidget(wpv);
                 listLayout->insertWidget(i, wpv);
             }
@@ -439,21 +414,18 @@ void WaypointList::waypointReadOnlyListChanged()
 
 void WaypointList::moveUp(Waypoint* wp)
 {
-    if (uas)
-    {
+    if (uas) {
         const QVector<Waypoint *> &waypoints = uas->getWaypointManager()->getWaypointList();
 
         //get the current position of wp in the local storage
         int i;
-        for (i = 0; i < waypoints.size(); i++)
-        {
+        for (i = 0; i < waypoints.size(); i++) {
             if (waypoints[i] == wp)
                 break;
         }
 
         // if wp was found and its not the first entry, move it
-        if (i < waypoints.size() && i > 0)
-        {
+        if (i < waypoints.size() && i > 0) {
             uas->getWaypointManager()->moveWaypoint(i, i-1);
         }
     }
@@ -461,21 +433,18 @@ void WaypointList::moveUp(Waypoint* wp)
 
 void WaypointList::moveDown(Waypoint* wp)
 {
-    if (uas)
-    {
+    if (uas) {
         const QVector<Waypoint *> &waypoints = uas->getWaypointManager()->getWaypointList();
 
         //get the current position of wp in the local storage
         int i;
-        for (i = 0; i < waypoints.size(); i++)
-        {
+        for (i = 0; i < waypoints.size(); i++) {
             if (waypoints[i] == wp)
                 break;
         }
 
         // if wp was found and its not the last entry, move it
-        if (i < waypoints.size()-1)
-        {
+        if (i < waypoints.size()-1) {
             uas->getWaypointManager()->moveWaypoint(i, i+1);
         }
     }
@@ -483,8 +452,7 @@ void WaypointList::moveDown(Waypoint* wp)
 
 void WaypointList::removeWaypoint(Waypoint* wp)
 {
-    if (uas)
-    {
+    if (uas) {
         uas->getWaypointManager()->removeWaypoint(wp->getId());
     }
 }
@@ -506,18 +474,14 @@ void WaypointList::on_clearWPListButton_clicked()
 {
 
 
-    if (uas)
-    {
-           emit clearPathclicked();
-          const QVector<Waypoint *> &waypoints = uas->getWaypointManager()->getWaypointList();
-            while(!waypoints.isEmpty())//for(int i = 0; i <= waypoints.size(); i++)
-            {
-                WaypointView* widget = wpViews.find(waypoints[0]).value();
-                widget->remove();
+    if (uas) {
+        emit clearPathclicked();
+        const QVector<Waypoint *> &waypoints = uas->getWaypointManager()->getWaypointList();
+        while(!waypoints.isEmpty()) { //for(int i = 0; i <= waypoints.size(); i++)
+            WaypointView* widget = wpViews.find(waypoints[0]).value();
+            widget->remove();
         }
-    }
-    else
-    {
+    } else {
 //        if(isGlobalWP)
 //        {
 //           emit clearPathclicked();
@@ -562,15 +526,13 @@ void WaypointList::on_clearWPListButton_clicked()
 
 void WaypointList::clearWPWidget()
 {
-  if (uas)
-  {
-    const QVector<Waypoint *> &waypoints = uas->getWaypointManager()->getWaypointList();
-      while(!waypoints.isEmpty())//for(int i = 0; i <= waypoints.size(); i++)
-      {
-          WaypointView* widget = wpViews.find(waypoints[0]).value();
-          widget->remove();
-      }
-  }
+    if (uas) {
+        const QVector<Waypoint *> &waypoints = uas->getWaypointManager()->getWaypointList();
+        while(!waypoints.isEmpty()) { //for(int i = 0; i <= waypoints.size(); i++)
+            WaypointView* widget = wpViews.find(waypoints[0]).value();
+            widget->remove();
+        }
+    }
 }
 
 //void WaypointList::setIsLoadFileWP()

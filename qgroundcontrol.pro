@@ -26,6 +26,7 @@
 
 include(lib/QMapControl/QMapControl.pri)
 include(lib/nmea/nmea.pri)
+#include(lib/opmapcontrol/opmapcontrol.pri)
 
 # message("Including bundled QMapControl version as FALLBACK. This is fine on Linux and MacOS, but not the best choice in Windows")
 QT += network \
@@ -57,36 +58,47 @@ exists(user_config.pri) {
 }
 
 INCLUDEPATH += $$BASEDIR/../mavlink/include/common
+INCLUDEPATH += $$BASEDIR/../mavlink/include
+INCLUDEPATH += $$BASEDIR/thirdParty/mavlink/include/common
+INCLUDEPATH += $$BASEDIR/thirdParty/mavlink/include
 contains(MAVLINK_CONF, pixhawk) { 
     # Remove the default set - it is included anyway
     INCLUDEPATH -= $$BASEDIR/../mavlink/include/common
+    INCLUDEPATH -= $$BASEDIR/thirdParty/mavlink/include/common
     
     # PIXHAWK SPECIAL MESSAGES
     INCLUDEPATH += $$BASEDIR/../mavlink/include/pixhawk
+    INCLUDEPATH += $$BASEDIR/thirdParty/mavlink/include/pixhawk
     DEFINES += QGC_USE_PIXHAWK_MESSAGES
 }
 contains(MAVLINK_CONF, slugs) { 
     # Remove the default set - it is included anyway
     INCLUDEPATH -= $$BASEDIR/../mavlink/include/common
+    INCLUDEPATH -= $$BASEDIR/thirdParty/mavlink/include/common
     
     # SLUGS SPECIAL MESSAGES
     INCLUDEPATH += $$BASEDIR/../mavlink/include/slugs
+    INCLUDEPATH += $$BASEDIR/thirdParty/mavlink/include/slugs
     DEFINES += QGC_USE_SLUGS_MESSAGES
 }
 contains(MAVLINK_CONF, ualberta) { 
     # Remove the default set - it is included anyway
     INCLUDEPATH -= $$BASEDIR/../mavlink/include/common
+    INCLUDEPATH -= $$BASEDIR/thirdParty/mavlink/include/common
     
     # UALBERTA SPECIAL MESSAGES
     INCLUDEPATH += $$BASEDIR/../mavlink/include/ualberta
+    INCLUDEPATH += $$BASEDIR/thirdParty/mavlink/include/ualberta
     DEFINES += QGC_USE_UALBERTA_MESSAGES
 }
 contains(MAVLINK_CONF, ardupilotmega) { 
     # Remove the default set - it is included anyway
     INCLUDEPATH -= $$BASEDIR/../mavlink/include/common
+    INCLUDEPATH -= $$BASEDIR/thirdParty/mavlink/include/common
     
     # UALBERTA SPECIAL MESSAGES
     INCLUDEPATH += $$BASEDIR/../mavlink/include/ardupilotmega
+    INCLUDEPATH += $$BASEDIR/thirdParty/mavlink/include/ardupilotmega
     DEFINES += QGC_USE_ARDUPILOTMEGA_MESSAGES
 }
 
@@ -96,19 +108,29 @@ contains(MAVLINK_CONF, ardupilotmega) {
 # done by the plugins above
 include(qgroundcontrol.pri)
 
-# QWT plot and QExtSerial depend on paths set by qgroundcontrol.pri
-# Include serial port library
-include(src/lib/qextserialport/qextserialport.pri)
-
 # Include QWT plotting library
 include(src/lib/qwt/qwt.pri)
 DEPENDPATH += . \
     lib/QMapControl \
     lib/QMapControl/src \
-    plugins
+    lib/opmapcontrol \
+    lib/opmapcontrol/src \
+    plugins \
+    thirdParty/qserialport/include \
+    thirdParty/qserialport/include/QtSerialPort \
+    thirdParty/qserialport
 INCLUDEPATH += . \
     lib/QMapControl \
-    $$BASEDIR/../mavlink/include
+    lib/opmapcontrol \
+    thirdParty/qserialport/include \
+    thirdParty/qserialport/include/QtSerialPort \
+    thirdParty/qserialport/src
+
+# Include serial port library
+#include(src/lib/qextserialport/qextserialport.pri)
+# include qserial library
+include(thirdParty/qserialport/qgroundcontrol-qserialport.pri)
+
 
 # ../mavlink/include \
 # MAVLink/include \
@@ -146,8 +168,6 @@ FORMS += src/ui/MainWindow.ui \
     src/ui/map3D/QGCGoogleEarthView.ui \
     src/ui/SlugsDataSensorView.ui \
     src/ui/SlugsHilSim.ui \
-    src/ui/SlugsPIDControl.ui \
-    src/ui/SlugsVideoCamControl.ui \
     src/ui/SlugsPadCameraControl.ui \
     src/ui/uas/QGCUnconnectedInfoWidget.ui \
     src/ui/designer/QGCToolWidget.ui \
@@ -159,6 +179,7 @@ FORMS += src/ui/MainWindow.ui \
     src/ui/mission/QGCCustomWaypointAction.ui \
     src/ui/QGCUDPLinkConfiguration.ui \
     src/ui/QGCSettingsWidget.ui \
+    src/ui/UASControlParameters.ui \
     src/ui/mission/QGCMissionDoWidget.ui \
     src/ui/mission/QGCMissionConditionWidget.ui \
     src/ui/WaypointViewReadOnly.ui
@@ -257,8 +278,6 @@ HEADERS += src/MG.h \
     src/ui/map3D/QGCWebPage.h \
     src/ui/SlugsDataSensorView.h \
     src/ui/SlugsHilSim.h \
-    src/ui/SlugsPIDControl.h \
-    src/ui/SlugsVideoCamControl.h \
     src/ui/SlugsPadCameraControl.h \
     src/ui/QGCMainWindowAPConfigurator.h \
     src/comm/MAVLinkSwarmSimulationLink.h \
@@ -275,6 +294,7 @@ HEADERS += src/MG.h \
     src/ui/QGCWaypointListMulti.h \
     src/ui/QGCUDPLinkConfiguration.h \
     src/ui/QGCSettingsWidget.h \
+    src/ui/uas/UASControlParameters.h \
     src/ui/mission/QGCMissionDoWidget.h \
     src/ui/mission/QGCMissionConditionWidget.h \
     src/uas/QGCUASParamManager.h \
@@ -389,8 +409,6 @@ SOURCES += src/main.cc \
     src/ui/map3D/QGCWebPage.cc \
     src/ui/SlugsDataSensorView.cc \
     src/ui/SlugsHilSim.cc \
-    src/ui/SlugsPIDControl.cpp \
-    src/ui/SlugsVideoCamControl.cpp \
     src/ui/SlugsPadCameraControl.cpp \
     src/ui/QGCMainWindowAPConfigurator.cc \
     src/comm/MAVLinkSwarmSimulationLink.cc \
@@ -407,6 +425,7 @@ SOURCES += src/main.cc \
     src/ui/QGCWaypointListMulti.cc \
     src/ui/QGCUDPLinkConfiguration.cc \
     src/ui/QGCSettingsWidget.cc \
+    src/ui/uas/UASControlParameters.cpp \
     src/ui/mission/QGCMissionDoWidget.cc \
     src/ui/mission/QGCMissionConditionWidget.cc \
     src/uas/QGCUASParamManager.cc \
@@ -472,3 +491,6 @@ win32:exists(src/lib/opalrt/OpalApi.h):exists(C:/OPAL-RT/RT-LAB7.2.4/Common/bin)
     FORMS += src/ui/OpalLinkSettings.ui
     DEFINES += OPAL_RT
 }
+
+TRANSLATIONS  += es-MX.ts \
+    en-US.ts

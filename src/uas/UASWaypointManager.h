@@ -50,7 +50,7 @@ class UAS;
  */
 class UASWaypointManager : public QObject
 {
-Q_OBJECT
+    Q_OBJECT
 private:
     enum WaypointState {
         WP_IDLE = 0,        ///< Waiting for commands
@@ -104,7 +104,9 @@ public:
     int getLocalFrameCount();   ///< Get the count of local waypoints in the list
     /*@}*/
 
-    UAS& getUAS() { return this->uas; }                         ///< Returns the owning UAS
+    UAS& getUAS() {
+        return this->uas;    ///< Returns the owning UAS
+    }
 
 //    /** @name Global waypoint list operations */
 //    /*@{*/

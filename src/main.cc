@@ -36,7 +36,22 @@ This file is part of the QGROUNDCONTROL project
 
 /* SDL does ugly things to main() */
 #ifdef main
-  #undef main
+#undef main
+#endif
+
+
+// Install a message handler so you do not need
+// the MSFT debug tools installed to se
+// qDebug(), qWarning(), qCritical and qAbort
+#ifdef Q_OS_WIN
+void msgHandler( QtMsgType type, const char* msg )
+{
+    const char symbols[] = { 'I', 'E', '!', 'X' };
+    QString output = QString("[%1] %2").arg( symbols[type] ).arg( msg );
+    std::cerr << output.toStdString() << std::endl;
+    if( type == QtFatalMsg ) abort();
+}
+
 #endif
 
 /**
@@ -46,8 +61,14 @@ This file is part of the QGROUNDCONTROL project
  * @param argv Commandline arguments
  * @return exit code, 0 for normal exit and !=0 for error cases
  */
+
 int main(int argc, char *argv[])
 {
+
+// install the message handler
+#ifdef Q_OS_WIN
+    qInstallMsgHandler( msgHandler );
+#endif
 
     Core core(argc, argv);
     return core.exec();

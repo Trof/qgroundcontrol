@@ -87,7 +87,7 @@ This file is part of the QGROUNDCONTROL project
 
 enum {
     kNumRetries = 3
-              };
+};
 
 // Function prototypes
 static kern_return_t FindModems(io_iterator_t *matchingServices);
@@ -108,33 +108,31 @@ static kern_return_t FindModems(io_iterator_t *matchingServices)
 
     // Serial devices are instances of class IOSerialBSDClient
     classesToMatch = IOServiceMatching(kIOSerialBSDServiceValue);
-    if (classesToMatch == NULL)
-    {
+    if (classesToMatch == NULL) {
         printf("IOServiceMatching returned a NULL dictionary.\n");
-    }
-    else {
+    } else {
         /*!
-  @function CFDictionarySetValue
-  Sets the value of the key in the dictionary.
-  @param theDict The dictionary to which the value is to be set. If this
-    parameter is not a valid mutable CFDictionary, the behavior is
-    undefined. If the dictionary is a fixed-capacity dictionary and
-    it is full before this operation, and the key does not exist in
-    the dictionary, the behavior is undefined.
-  @param key The key of the value to set into the dictionary. If a key
-    which matches this key is already present in the dictionary, only
-    the value is changed ("add if absent, replace if present"). If
-    no key matches the given key, the key-value pair is added to the
-    dictionary. If added, the key is retained by the dictionary,
-    using the retain callback provided
-    when the dictionary was created. If the key is not of the sort
-    expected by the key retain callback, the behavior is undefined.
-  @param value The value to add to or replace into the dictionary. The value
-    is retained by the dictionary using the retain callback provided
-    when the dictionary was created, and the previous value if any is
-    released. If the value is not of the sort expected by the
-    retain or release callbacks, the behavior is undefined.
-*/
+          @function CFDictionarySetValue
+          Sets the value of the key in the dictionary.
+          @param theDict The dictionary to which the value is to be set. If this
+            parameter is not a valid mutable CFDictionary, the behavior is
+            undefined. If the dictionary is a fixed-capacity dictionary and
+            it is full before this operation, and the key does not exist in
+            the dictionary, the behavior is undefined.
+          @param key The key of the value to set into the dictionary. If a key
+            which matches this key is already present in the dictionary, only
+            the value is changed ("add if absent, replace if present"). If
+            no key matches the given key, the key-value pair is added to the
+            dictionary. If added, the key is retained by the dictionary,
+            using the retain callback provided
+            when the dictionary was created. If the key is not of the sort
+            expected by the key retain callback, the behavior is undefined.
+          @param value The value to add to or replace into the dictionary. The value
+            is retained by the dictionary using the retain callback provided
+            when the dictionary was created, and the previous value if any is
+            released. If the value is not of the sort expected by the
+            retain or release callbacks, the behavior is undefined.
+        */
         CFDictionarySetValue(classesToMatch,
                              CFSTR(kIOSerialBSDTypeKey),
                              CFSTR(kIOSerialBSDModemType));
@@ -159,13 +157,12 @@ static kern_return_t FindModems(io_iterator_t *matchingServices)
         @result A kern_return_t error code. */
 
     kernResult = IOServiceGetMatchingServices(kIOMasterPortDefault, classesToMatch, matchingServices);
-    if (KERN_SUCCESS != kernResult)
-    {
+    if (KERN_SUCCESS != kernResult) {
         printf("IOServiceGetMatchingServices returned %d\n", kernResult);
         goto exit;
     }
 
-    exit:
+exit:
     return kernResult;
 }
 
@@ -183,8 +180,7 @@ static kern_return_t GetModemPath(io_iterator_t serialPortIterator, char *bsdPat
 
     // Iterate across all modems found. In this example, we bail after finding the first modem.
 
-    while ((modemService = IOIteratorNext(serialPortIterator)) && !modemFound)
-    {
+    while ((modemService = IOIteratorNext(serialPortIterator)) && !modemFound) {
         CFTypeRef  bsdPathAsCFString;
 
         // Get the callout device's path (/dev/cu.xxxxx). The callout device should almost always be
@@ -192,11 +188,10 @@ static kern_return_t GetModemPath(io_iterator_t serialPortIterator, char *bsdPat
         // incoming calls, e.g. a fax listener.
 
         bsdPathAsCFString = IORegistryEntryCreateCFProperty(modemService,
-                                                            CFSTR(kIOCalloutDeviceKey),
-                                                            kCFAllocatorDefault,
-                                                            0);
-        if (bsdPathAsCFString)
-        {
+                            CFSTR(kIOCalloutDeviceKey),
+                            kCFAllocatorDefault,
+                            0);
+        if (bsdPathAsCFString) {
             Boolean result;
 
             // Convert the path from a CFString to a C (NUL-terminated) string for use
@@ -208,8 +203,7 @@ static kern_return_t GetModemPath(io_iterator_t serialPortIterator, char *bsdPat
                                         kCFStringEncodingUTF8);
             CFRelease(bsdPathAsCFString);
 
-            if (result)
-            {
+            if (result) {
                 //printf("Modem found with BSD path: %s", bsdPath);
                 modemFound = true;
                 kernResult = KERN_SUCCESS;
@@ -228,12 +222,11 @@ static kern_return_t GetModemPath(io_iterator_t serialPortIterator, char *bsdPat
 #endif
 
 SerialConfigurationWindow::SerialConfigurationWindow(LinkInterface* link, QWidget *parent, Qt::WindowFlags flags) : QWidget(parent, flags),
-userConfigured(false)
+    userConfigured(false)
 {
     SerialLinkInterface* serialLink = dynamic_cast<SerialLinkInterface*>(link);
 
-    if(serialLink != 0)
-    {
+    if(serialLink != 0) {
         serialLink->loadSettings();
         this->link = serialLink;
 
@@ -250,6 +243,44 @@ userConfigured(false)
 
         setupPortList();
 
+        // Set up baud rates
+        ui.baudRate->addItem("115200", 115200);
+
+        ui.baudRate->clear();
+        ui.baudRate->addItem("50", 50);
+        ui.baudRate->addItem("70", 70);
+        ui.baudRate->addItem("110", 110);
+        ui.baudRate->addItem("134", 134);
+        ui.baudRate->addItem("150", 150);
+        ui.baudRate->addItem("200", 200);
+        ui.baudRate->addItem("300", 300);
+        ui.baudRate->addItem("600", 600);
+        ui.baudRate->addItem("1200", 1200);
+        ui.baudRate->addItem("1800", 1800);
+        ui.baudRate->addItem("2400", 2400);
+        ui.baudRate->addItem("4800", 4800);
+        ui.baudRate->addItem("9600", 9600);
+#ifdef Q_OS_WIN
+        ui.baudRate->addItem("14400", 14400);
+#endif
+        ui.baudRate->addItem("19200", 19200);
+        ui.baudRate->addItem("34800", 34800);
+#ifdef Q_OS_WIN
+        ui.baudRate->addItem("56000", 56000);
+#endif
+        ui.baudRate->addItem("57600", 57600);
+#ifdef Q_OS_WIN
+        ui.baudRate->addItem("76800", 76800);
+#endif
+        ui.baudRate->addItem("115200", 115200);
+#ifdef Q_OS_WIN
+        ui.baudRate->addItem("128000", 128000);
+        ui.baudRate->addItem("230400", 230400);
+        ui.baudRate->addItem("256000", 256000);
+        ui.baudRate->addItem("460800", 460800);
+#endif
+        ui.baudRate->addItem("921600", 921600);
+
         connect(action, SIGNAL(triggered()), this, SLOT(configureCommunication()));
 
         // Make sure that a change in the link name will be reflected in the UI
@@ -258,7 +289,7 @@ userConfigured(false)
         // Connect the individual user interface inputs
         connect(ui.portName, SIGNAL(editTextChanged(QString)), this, SLOT(setPortName(QString)));
         connect(ui.portName, SIGNAL(currentIndexChanged(QString)), this, SLOT(setPortName(QString)));
-        connect(ui.baudRate, SIGNAL(activated(int)), this->link, SLOT(setBaudRateType(int)));
+        connect(ui.baudRate, SIGNAL(activated(QString)), this->link, SLOT(setBaudRateString(QString)));
         connect(ui.flowControlCheckBox, SIGNAL(toggled(bool)), this, SLOT(enableFlowControl(bool)));
         connect(ui.parNone, SIGNAL(toggled(bool)), this, SLOT(setParityNone(bool)));
         connect(ui.parOdd, SIGNAL(toggled(bool)), this, SLOT(setParityOdd(bool)));
@@ -270,8 +301,7 @@ userConfigured(false)
         ui.portName->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
         ui.baudRate->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
 
-        switch(this->link->getParityType())
-        {
+        switch(this->link->getParityType()) {
         case 0:
             ui.parNone->setChecked(true);
             break;
@@ -300,7 +330,7 @@ userConfigured(false)
             enableFlowControl(false);
         }
 
-        ui.baudRate->setCurrentIndex(this->link->getBaudRateType());
+        ui.baudRate->setCurrentIndex(ui.baudRate->findText(QString("%1").arg(this->link->getBaudRate())));
 
         ui.dataBitsSpinBox->setValue(this->link->getDataBits());
         ui.stopBitsSpinBox->setValue(this->link->getStopBits());
@@ -312,9 +342,7 @@ userConfigured(false)
         // Display the widget
         this->window()->setWindowTitle(tr("Serial Communication Settings"));
         //this->show();
-    }
-    else
-    {
+    } else {
         qDebug() << "Link is NOT a serial link, can't open configuration window";
 
     }
@@ -370,10 +398,8 @@ void SerialConfigurationWindow::setupPortList()
     QFileInfoList list = dir.entryInfoList();
     for (int i = 0; i < list.size(); ++i) {
         QFileInfo fileInfo = list.at(i);
-        if (fileInfo.fileName().contains(QString("ttyUSB")) || fileInfo.fileName().contains(QString("ttyS")))
-        {
-            if (ui.portName->findText(fileInfo.canonicalFilePath()) == -1)
-            {
+        if (fileInfo.fileName().contains(QString("ttyUSB")) || fileInfo.fileName().contains(QString("ttyS"))) {
+            if (ui.portName->findText(fileInfo.canonicalFilePath()) == -1) {
                 ui.portName->addItem(fileInfo.canonicalFilePath());
                 if (!userConfigured) ui.portName->setEditText(fileInfo.canonicalFilePath());
             }
@@ -397,10 +423,8 @@ void SerialConfigurationWindow::setupPortList()
     IOObjectRelease(serialPortIterator);    // Release the iterator.
 
     // Add found modems
-    if (bsdPath[0])
-    {
-        if (ui.portName->findText(QString(bsdPath)) == -1)
-        {
+    if (bsdPath[0]) {
+        if (ui.portName->findText(QString(bsdPath)) == -1) {
             ui.portName->addItem(QString(bsdPath));
             if (!userConfigured) ui.portName->setEditText(QString(bsdPath));
         }
@@ -413,13 +437,10 @@ void SerialConfigurationWindow::setupPortList()
     dir.setFilter(QDir::System);
 
     QFileInfoList list = dir.entryInfoList();
-    for (int i = list.size() - 1; i >= 0; i--)
-    {
+    for (int i = list.size() - 1; i >= 0; i--) {
         QFileInfo fileInfo = list.at(i);
-        if (fileInfo.fileName().contains(QString("ttyUSB")) || fileInfo.fileName().contains(QString("ttyS")) || fileInfo.fileName().contains(QString("tty.usbserial")))
-        {
-            if (ui.portName->findText(fileInfo.canonicalFilePath()) == -1)
-            {
+        if (fileInfo.fileName().contains(QString("ttyUSB")) || fileInfo.fileName().contains(QString("ttyS")) || fileInfo.fileName().contains(QString("tty.usbserial"))) {
+            if (ui.portName->findText(fileInfo.canonicalFilePath()) == -1) {
                 ui.portName->addItem(fileInfo.canonicalFilePath());
                 if (!userConfigured) ui.portName->setEditText(fileInfo.canonicalFilePath());
             }
@@ -434,12 +455,10 @@ void SerialConfigurationWindow::setupPortList()
     QList<QextPortInfo> ports = QextSerialEnumerator::getPorts();
 
     // Add the ports in reverse order, because we prepend them to the list
-    for (int i = ports.size() - 1; i >= 0; i--)
-    {
+    for (int i = ports.size() - 1; i >= 0; i--) {
         QString portString = QString(ports.at(i).portName.toLocal8Bit().constData()) + " - " + QString(ports.at(i).friendName.toLocal8Bit().constData()).split("(").first();
         // Prepend newly found port to the list
-        if (ui.portName->findText(portString) == -1)
-        {
+        if (ui.portName->findText(portString) == -1) {
             ui.portName->insertItem(0, portString);
             if (!userConfigured) ui.portName->setEditText(portString);
         }
@@ -452,10 +471,8 @@ void SerialConfigurationWindow::setupPortList()
     //printf("===================================\n\n");
 #endif
 
-    if (this->link)
-    {
-        if (this->link->getPortName() != "")
-        {
+    if (this->link) {
+        if (this->link->getPortName() != "") {
             ui.portName->setEditText(this->link->getPortName());
         }
     }
@@ -463,12 +480,9 @@ void SerialConfigurationWindow::setupPortList()
 
 void SerialConfigurationWindow::enableFlowControl(bool flow)
 {
-    if(flow)
-    {
+    if(flow) {
         link->setFlowType(1);
-    }
-    else
-    {
+    } else {
         link->setFlowType(0);
     }
 }
@@ -490,13 +504,12 @@ void SerialConfigurationWindow::setParityEven(bool accept)
 
 void SerialConfigurationWindow::setPortName(QString port)
 {
-#ifdef _WIN32
+#ifdef Q_OS_WIN
     port = port.split("-").first();
 #endif
     port = port.remove(" ");
 
-    if (this->link->getPortName() != port)
-    {
+    if (this->link->getPortName() != port) {
         link->setPortName(port);
     }
     userConfigured = true;

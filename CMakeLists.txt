@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 2.6)
 project (qgroundcontrol)
 
 # marcos
-macro(find_or_build_from_source PACKAGE PACKAGE_PATH IS_GIT_SUBMODULE)
+macro(find_or_build_from_source PACKAGE PACKAGE_PATH)
     add_custom_target(${PACKAGE})
     if (NOT ${PACKAGE}_BUILD_FROM_SOURCE)
         find_package(${PACKAGE})
@@ -14,11 +14,6 @@ macro(find_or_build_from_source PACKAGE PACKAGE_PATH IS_GIT_SUBMODULE)
         add_custom_target(${PACKAGE}_BUILD DEPENDS ${PACKAGE}_BUILD.stamp)
         add_dependencies(${PACKAGE} ${PACKAGE}_BUILD)
         set(${PACKAGE}_FOUND TRUE)
-        if (${IS_GIT_SUBMODULE})
-            message(STATUS "${PACKAGE} detected as git submodule, will attempt to initialize it")
-            list(APPEND GIT_SUBMODULES ${PACKAGE_PATH})
-            add_dependencies(${PACKAGE}_BUILD GIT)
-        endif()
     endif()
 endmacro(find_or_build_from_source)
 
@@ -103,18 +98,6 @@ include(CPack)
 # add make dist target
 add_custom_target(dist COMMAND ${CMAKE_MAKE_PROGRAM} package_source)
 
-# git submodules
-if(IS_DIRECTORY ${PROJECT_SOURCE_DIR}/.git)
-    message(STATUS "git repository detected, will attempt to load submodules")
-    set(FOUND_GIT_REPO TRUE)
-    add_custom_command(OUTPUT GIT.stamp 
-        COMMAND cd ${PROJECT_SOURCE_DIR} && git submodule init ${GIT_SUBMODULES}
-        COMMAND cd ${PROJECT_SOURCE_DIR} && git submodule update ${GIT_SUBMODULES})
-    add_custom_target(GIT DEPENDS GIT.stamp)
-else()
-    set(FOUND_GIT_REPO FALSE)
-endif()
-
 # find libraries with cmake modules
 find_package(Qt4 COMPONENTS QtGui QtCore QtNetwork QtOpenGL QtSVG QtXML QtPhonon QtWebKit REQUIRED)
 set(PHONON_FIND_QUIETLY FALSE)
@@ -131,7 +114,8 @@ else()
     set(OPENSCENEGRAPH_FOUND TRUE)
 endif()
 
-find_or_build_from_source(MAVLINK thirdParty/mavlink FOUND_GIT_REPO)
+find_or_build_from_source(MAVLINK thirdParty/mavlink)
+find_or_build_from_source(QSERIALPORT thirdParty/qserialport)
 
 # build libraries from source if not found on system
 if(MAVLINK_BUILD_FROM_SOURCE)
@@ -146,6 +130,69 @@ if(MAVLINK_BUILD_FROM_SOURCE)
 
     add_custom_command(OUTPUT MAVLINK_BUILD.stamp 
         COMMAND touch MAVLINK_BUILD.stamp)
+endif()
+
+if(QSERIALPORT_BUILD_FROM_SOURCE)
+    # qserialport headers without Q_OBJECT
+    # r !grep -RL Q_OBJECT thirdParty/qserialport/include
+    set (qserialportHdrs
+        thirdParty/qserialport/include/QtSerialPort/qserialport_export.h
+        thirdParty/qserialport/include/QtSerialPort/qserialport
+        thirdParty/qserialport/include/QtSerialPort/qportsettings.h
+        )
+    # qserialport headers with Q_OBJECT
+    # r !grep -Rl Q_OBJECT thirdParty/qserialport
+    set (qserialportMocSrc
+        thirdParty/qserialport/include/QtSerialPort/qserialport.h
+        thirdParty/qserialport/include/QtSerialPort/qserialportnative.h
+        )
+    # qserialport src
+    set (qserialportSrc
+        thirdParty/qserialport/src/common/qserialport.cpp
+        thirdParty/qserialport/src/common/qportsettings.cpp
+    )
+
+    # qserialport native code
+    if (WIN32)
+        list(APPEND qserialportHdrs
+            thirdParty/qserialport/src/win32/commdcbhelper.h
+            )
+        list(APPEND qserialportMocSrc
+            thirdParty/qserialport/src/win32/qwincommevtnotifier.h
+            thirdParty/qserialport/src/win32/wincommevtbreaker.h
+        )
+        list(APPEND qserialportSrc
+            thirdParty/qserialport/src/win32/qserialportnative_win32.cpp
+            thirdParty/qserialport/src/win32/commdcbhelper.cpp
+            thirdParty/qserialport/src/win32/qwincommevtnotifier.cpp
+            #thirdParty/qserialport/src/win32/qserialportnative_wince.cpp
+            #thirdParty/qserialport/src/win32/wincommevtbreaker.cpp
+            )
+    elseif(UNIX OR APPLE)
+        list(APPEND qserialportHdrs
+            thirdParty/qserialport/src/posix/termioshelper.h
+            )
+        list(APPEND qserialportSrc    
+            thirdParty/qserialport/src/posix/termioshelper.cpp
+            thirdParty/qserialport/src/posix/qserialportnative_posix.cpp
+            )
+    else()
+        message(FATAL_ERROR "unknown OS")
+    endif()
+
+    # qserialport linking
+    qt4_wrap_cpp(qserialportMoc ${qserialportMocSrc})
+    add_library(qserialport ${qserialportMoc} ${qserialportSrc})
+    target_link_libraries(qserialport ${QT_LIBRARIES})
+
+    set(QSERIALPORT_INCLUDE_DIRS
+        ${PROJECT_SOURCE_DIR}/thirdParty/qserialport/include
+        ${PROJECT_SOURCE_DIR}/thirdParty/qserialport/include/QtSerialPort
+        ${PROJECT_SOURCE_DIR}/thirdParty/qserialport/src
+        )
+    set(QSERIALPORT_LIBRARIES qserialport)
+    add_custom_command(OUTPUT qserialport_BUILD.stamp 
+        COMMAND touch qserialport_BUILD.stamp)
 endif()
 
 # data directory
@@ -200,6 +247,12 @@ message(STATUS "=======================================")
 message(STATUS "\t\tMAVLINK\t\t${MAVLINK_FOUND}")
 if (MAVLINK_FOUND)
     list(APPEND qgroundcontrolIncludes ${MAVLINK_INCLUDE_DIRS})
+endif()
+
+message(STATUS "\t\tqserialport\t${QSERIALPORT_FOUND}")
+if (QSERIALPORT_FOUND)
+    list(APPEND qgroundcontrolIncludes ${QSERIALPORT_INCLUDE_DIRS})
+    list(APPEND qgroundcontrolLibs ${QSERIALPORT_LIBRARIES})
 endif()
 
 message(STATUS "\t\tOpenSceneGraph\t${OPENSCENEGRAPH_FOUND}")
@@ -287,8 +340,8 @@ set(qgroundcontrolUiSrc
     #src/ui/map3D/QGCGoogleEarthView.ui
     src/ui/SlugsDataSensorView.ui
     src/ui/SlugsHilSim.ui
-    src/ui/SlugsPIDControl.ui
-    src/ui/SlugsVideoCamControl.ui
+    #src/ui/SlugsPIDControl.ui
+    #src/ui/SlugsVideoCamControl.ui
     src/ui/SlugsPadCameraControl.ui
     src/ui/uas/QGCUnconnectedInfoWidget.ui
     src/ui/designer/QGCToolWidget.ui
@@ -298,6 +351,7 @@ set(qgroundcontrolUiSrc
     src/ui/QGCWaypointListMulti.ui
     src/ui/mission/QGCCustomWaypointAction.ui
     src/ui/QGCUDPLinkConfiguration.ui
+    src/ui/UASControlParameters.ui
     src/ui/QGCSettingsWidget.ui
     )
 
@@ -377,6 +431,7 @@ set(qgroundcontrolMocSrc
 	#src/comm/OpalLink.h
 	src/comm/MAVLinkProtocol.h
 	src/comm/SerialLinkInterface.h
+	src/comm/SerialInterface.h
 	src/comm/UDPLink.h
 	src/comm/LinkManager.h
 	src/comm/LinkInterface.h
@@ -387,6 +442,7 @@ set(qgroundcontrolMocSrc
 	src/comm/MAVLinkSimulationMAV.h
 	#src/comm/QGCNMEAProtocol.h
 	src/comm/SerialLink.h
+    src/ui/uas/UASControlParameters.h
 	src/ui/QGCSettingsWidget.h
 	#src/ui/map3D/WebImageCache.h
 	#src/ui/map3D/QGCGoogleEarthView.h
@@ -409,7 +465,7 @@ set(qgroundcontrolMocSrc
 	src/ui/SlugsPadCameraControl.h
 	src/ui/QGCMainWindowAPConfigurator.h
 	src/ui/MainWindow.h
-	src/ui/SlugsVideoCamControl.h
+	#src/ui/SlugsVideoCamControl.h
 	src/ui/DebugConsole.h
 	src/ui/XMLCommProtocolWidget.h
 	src/ui/uas/UASListWidget.h
@@ -417,7 +473,7 @@ set(qgroundcontrolMocSrc
 	src/ui/uas/QGCUnconnectedInfoWidget.h
 	src/ui/uas/UASControlWidget.h
 	src/ui/uas/UASView.h
-	src/ui/SlugsPIDControl.h
+	#src/ui/SlugsPIDControl.h
 	src/ui/HUD.h
 	src/ui/RadioCalibration/RadioCalibrationWindow.h
 	src/ui/RadioCalibration/RadioCalibrationData.h
@@ -509,6 +565,7 @@ set (qgroundcontrolSrc
     src/ui/QGCPxImuFirmwareUpdate.cc
     src/ui/QGCRemoteControlView.cc
     src/ui/QGCSensorSettingsWidget.cc
+    src/ui/uas/UASControlParameters.cpp
     src/ui/QGCSettingsWidget.cc
     src/ui/QGCUDPLinkConfiguration.cc
     src/ui/QGCWaypointListMulti.cc
@@ -522,9 +579,9 @@ set (qgroundcontrolSrc
     src/ui/SerialConfigurationWindow.cc
     src/ui/SlugsDataSensorView.cc
     src/ui/SlugsHilSim.cc
-    src/ui/SlugsPIDControl.cpp
+    #src/ui/SlugsPIDControl.cpp
     src/ui/SlugsPadCameraControl.cpp
-    src/ui/SlugsVideoCamControl.cpp
+    #src/ui/SlugsVideoCamControl.cpp
     src/ui/WaypointList.cc
     src/ui/WaypointView.cc
     src/ui/XMLCommProtocolWidget.cc
