@@ -209,7 +209,7 @@ void QGCGoogleEarthView::addUAS(UASInterface* uas)
     connect(uas, SIGNAL(globalPositionChanged(UASInterface*,double,double,double,quint64)), this, SLOT(updateGlobalPosition(UASInterface*,double,double,double,quint64)));
     // Receive waypoint updates
     // Connect the waypoint manager / data storage to the UI
-    connect(uas->getWaypointManager(), SIGNAL(waypointListChanged(int)), this, SLOT(updateWaypointList(int)));
+    connect(uas->getWaypointManager(), SIGNAL(waypointReadOnlyListChanged(int)), this, SLOT(updateWaypointList(int)));
     connect(uas->getWaypointManager(), SIGNAL(waypointChanged(int, Waypoint*)), this, SLOT(updateWaypoint(int,Waypoint*)));
     //connect(this, SIGNAL(waypointCreated(Waypoint*)), uas->getWaypointManager(), SLOT(addWaypoint(Waypoint*)));
     // TODO Update waypoint list on UI changes here

@@ -127,6 +127,11 @@ case 238: //MAV_CMD_DO_FINISH_SEARCH
         m_ui->displayBar->setText(QString("Check if search was successful. yes -> jump to %1, no -> jump to %2.  Jumps left: %3").arg(wp->getParam1()).arg(wp->getParam2()).arg(wp->getParam3()));
         break;
     }
+case 240: //MAV_CMD_DO_SWEEP
+    {
+        m_ui->displayBar->setText(QString("Sweep. Corners: (%1,%2) and (%3,%4); z: %5; scan radius: %6").arg(wp->getParam3()).arg(wp->getParam4()).arg(wp->getParam5()).arg(wp->getParam6()).arg(wp->getParam7()).arg(wp->getParam1()));
+        break;
+    }
 default:
     {
         m_ui->displayBar->setText(QString("Unknown Command ID (%1) : %2, %3, %4, %5, %6, %7, %8").arg(wp->getAction()).arg(wp->getParam1()).arg(wp->getParam2()).arg(wp->getParam3()).arg(wp->getParam4()).arg(wp->getParam5()).arg(wp->getParam6()).arg(wp->getParam7()));

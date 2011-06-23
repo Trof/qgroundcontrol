@@ -239,12 +239,12 @@ void UASWaypointManager::handleWaypointCurrent(quint8 systemId, quint8 compId, m
             current_state = WP_IDLE;
 
             // update the local main storage
-            if (wpc->seq < waypoints.size()) {
-                for(int i = 0; i < waypoints.size(); i++) {
-                    if (waypoints[i]->getId() == wpc->seq) {
-                        waypoints[i]->setCurrent(true);
+            if (wpc->seq < waypoints_readonly.size()) {
+                for(int i = 0; i < waypoints_readonly.size(); i++) {
+                    if (waypoints_readonly[i]->getId() == wpc->seq) {
+                        waypoints_readonly[i]->setCurrent(true);
                     } else {
-                        waypoints[i]->setCurrent(false);
+                        waypoints_readonly[i]->setCurrent(false);
                     }
                 }
             }
@@ -265,8 +265,8 @@ void UASWaypointManager::notifyOfChange(Waypoint* wp)
     if (wp != NULL) {
         emit waypointChanged(uas.getUASID(), wp);
     } else {
-        emit waypointListChanged();
-        emit waypointListChanged(uas.getUASID());
+        emit waypointReadOnlyListChanged();
+        //emit waypointListChanged(uas.getUASID());
     }
 }
 
@@ -352,7 +352,7 @@ void UASWaypointManager::addWaypoint(Waypoint *wp, bool enforceFirstActive)
         wp->setId(waypoints.size());
         if (enforceFirstActive && waypoints.size() == 0) wp->setCurrent(true);
         waypoints.insert(waypoints.size(), wp);
-        connect(wp, SIGNAL(changed(Waypoint*)), this, SLOT(notifyOfChange(Waypoint*)));
+        //connect(wp, SIGNAL(changed(Waypoint*)), this, SLOT(notifyOfChange(Waypoint*)));
 
         emit waypointListChanged();
         emit waypointListChanged(uas.getUASID());
@@ -370,7 +370,7 @@ void UASWaypointManager::addWaypointReadOnly(Waypoint *wp)
         //if (enforceFirstActive && waypoints.size() == 0) wp->setCurrent(true);
         waypoints_readonly.insert(waypoints_readonly.size(), wp);
 
-        //connect(wp, SIGNAL(changed(Waypoint*)), this, SLOT(notifyOfChange(Waypoint*)));
+        connect(wp, SIGNAL(changed(Waypoint*)), this, SLOT(notifyOfChange(Waypoint*)));
 
         emit waypointReadOnlyListChanged();
     }

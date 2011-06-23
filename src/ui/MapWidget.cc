@@ -735,7 +735,7 @@ void MapWidget::activeUASSet(UASInterface* uas)
     // Disconnect old MAV
     if (mav) {
         // Disconnect the waypoint manager / data storage from the UI
-        disconnect(mav->getWaypointManager(), SIGNAL(waypointListChanged(int)), this, SLOT(updateWaypointList(int)));
+        disconnect(mav->getWaypointManager(), SIGNAL(waypointReadOnlyListChanged(int)), this, SLOT(updateWaypointList(int)));
         disconnect(mav->getWaypointManager(), SIGNAL(waypointChanged(int, Waypoint*)), this, SLOT(updateWaypoint(int,Waypoint*)));
         disconnect(this, SIGNAL(waypointCreated(Waypoint*)), mav->getWaypointManager(), SLOT(addWaypoint(Waypoint*)));
     }
@@ -755,7 +755,7 @@ void MapWidget::activeUASSet(UASInterface* uas)
         updateWaypointList(uas->getUASID());
 
         // Connect the waypoint manager / data storage to the UI
-        connect(mav->getWaypointManager(), SIGNAL(waypointListChanged(int)), this, SLOT(updateWaypointList(int)));
+        connect(mav->getWaypointManager(), SIGNAL(waypointReadOnlyListChanged(int)), this, SLOT(updateWaypointList(int)));
         connect(mav->getWaypointManager(), SIGNAL(waypointChanged(int, Waypoint*)), this, SLOT(updateWaypoint(int,Waypoint*)));
         connect(this, SIGNAL(waypointCreated(Waypoint*)), mav->getWaypointManager(), SLOT(addWaypoint(Waypoint*)));
 

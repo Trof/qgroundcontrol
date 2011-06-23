@@ -90,8 +90,11 @@ public:
 
     /** @name Waypoint list operations */
     /*@{*/
-    const QVector<Waypoint *> &getWaypointList(void) { return waypoints; }  ///< Returns a const reference to the edited waypoint list.
-    const QVector<Waypoint *> &getWaypointReadOnlyList(void) { return waypoints_readonly; }  ///< Returns a const reference to the waypoint list that is running on MAV.
+    const QVector<Waypoint *> &getWaypointList(void) { return waypoints_readonly; }  ///< Returns a const reference to the waypoint list that is running on MAV.
+    const QVector<Waypoint *> &getWaypointEditList(void) { return waypoints; }  ///< Returns a const reference to the edited waypoint list.
+
+    //const QVector<Waypoint *> &getWaypointList(void) { return waypoints; }  ///< Returns a const reference to the edited waypoint list.
+    //const QVector<Waypoint *> &getWaypointReadOnlyList(void) { return waypoints_readonly; }  ///< Returns a const reference to the waypoint list that is running on MAV.
     const QVector<Waypoint *> getGlobalFrameWaypointList();  ///< Returns a global waypoint list
     const QVector<Waypoint *> getGlobalFrameAndNavTypeWaypointList(); ///< Returns a global waypoint list containing only waypoints suitable for navigation. Actions and other mission items are filtered out.
     int getIndexOf(Waypoint* wp);                   ///< Get the index of a waypoint in the list
@@ -142,9 +145,9 @@ public slots:
     /*@}*/
 
 signals:
-    void waypointListChanged(void);                 ///< emits signal that the waypoint list has been changed
+    void waypointListChanged(void);                 ///< emits signal that the waypoint list (edit) has been changed
     void waypointListChanged(int uasid);            ///< Emits signal that list has been changed
-    void waypointReadOnlyListChanged();
+    void waypointReadOnlyListChanged(void);         ///< emits signal that the waypoint list (view) has been changed
     void waypointChanged(int uasid, Waypoint* wp);  ///< emits signal that waypoint has been changed
     void currentWaypointChanged(quint16);           ///< emits the new current waypoint sequence number
     void updateStatusString(const QString &);       ///< emits the current status string
