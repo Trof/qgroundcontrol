@@ -114,6 +114,8 @@ void UASWaypointManager::handleWaypointCount(quint8 systemId, quint8 compId, qui
             current_wp_id = 0;
             current_partner_systemid = 0;
             current_partner_compid = 0;
+
+            emit waypointReadOnlyListChanged();
         }
     } else {
         qDebug("Rejecting message, check mismatch: current_state: %d == %d, system id %d == %d, comp id %d == %d", current_state, WP_GETLIST, current_partner_systemid, systemId, current_partner_compid, compId);
@@ -200,7 +202,7 @@ void UASWaypointManager::handleCommandAck(quint8 systemId, quint8 compId, mavlin
             protocol_timer.stop();
             current_state = WP_IDLE;
             emit updateStatusString("done.");
-            qDebug() << "received command ack from ID " << systemId << ". result: " << cmda->result << ", feedback: " << cmda->command;
+            qDebug() << "received command("<< cmda->command <<") ack from ID " << systemId << ". result: " << cmda->result;
         }
     }
 }

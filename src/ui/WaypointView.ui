@@ -174,10 +174,10 @@ QProgressBar::chunk#thrustBar {
          <enum>Qt::TabFocus</enum>
         </property>
         <property name="toolTip">
-         <string>Currently selected waypoint</string>
+         <string>Starting waypoint</string>
         </property>
         <property name="statusTip">
-         <string>Currently selected waypoint</string>
+         <string>Starting waypoint</string>
         </property>
         <property name="text">
          <string/>

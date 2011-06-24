@@ -176,6 +176,12 @@ QProgressBar::chunk#thrustBar {
       </property>
       <item>
        <widget class="QCheckBox" name="current">
+        <property name="toolTip">
+         <string>Currently executed waypoint</string>
+        </property>
+        <property name="statusTip">
+         <string>Currently executed waypoint</string>
+        </property>
         <property name="text">
          <string/>
         </property>
@@ -217,6 +223,12 @@ QProgressBar::chunk#thrustBar {
       </item>
       <item>
        <widget class="QCheckBox" name="autoContinue">
+        <property name="toolTip">
+         <string>Automatically continue after this waypoint</string>
+        </property>
+        <property name="statusTip">
+         <string>Automatically continue after this waypoint</string>
+        </property>
         <property name="text">
          <string/>
         </property>
