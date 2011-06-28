@@ -1975,14 +1975,14 @@ void UAS::clearWaypointList()
 
 void UAS::halt()
 {
-/*
+
     mavlink_message_t msg;
     // TODO Replace MG System ID with static function call and allow to change ID in GUI
     mavlink_msg_action_pack(MG::SYSTEM::ID, MG::SYSTEM::COMPID, &msg, this->getUASID(), MAV_COMP_ID_IMU, (int)MAV_ACTION_HALT);
     // Send message twice to increase chance of reception
     sendMessage(msg);
     sendMessage(msg);
-*/
+
     mavlink_message_t message;
     mavlink_command_t halt;
 
@@ -1999,14 +1999,14 @@ void UAS::halt()
 
 void UAS::go()
 {
-    /*
+
     mavlink_message_t msg;
     // TODO Replace MG System ID with static function call and allow to change ID in GUI
     mavlink_msg_action_pack(MG::SYSTEM::ID, MG::SYSTEM::COMPID, &msg, this->getUASID(), MAV_COMP_ID_IMU,  (int)MAV_ACTION_CONTINUE);
     // Send message twice to increase chance of reception
     sendMessage(msg);
     sendMessage(msg);
-    */
+
 
     mavlink_message_t message;
     mavlink_command_t go;

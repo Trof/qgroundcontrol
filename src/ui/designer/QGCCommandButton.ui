@@ -206,7 +206,11 @@
     </widget>
    </item>
    <item row="7" column="3">
-    <widget class="QSpinBox" name="editCommandIdSpinBox"/>
+    <widget class="QSpinBox" name="editCommandIdSpinBox">
+     <property name="maximum">
+      <number>255</number>
+     </property>
+    </widget>
    </item>
    <item row="6" column="4">
     <widget class="QCheckBox" name="editConfirmationCheckBox">
