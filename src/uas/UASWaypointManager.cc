@@ -38,9 +38,7 @@ This file is part of the QGROUNDCONTROL project
 #define PROTOCOL_DELAY_MS 40        ///< minimum delay between sent messages
 #define PROTOCOL_MAX_RETRIES 3      ///< maximum number of send retries (after timeout)
 
-
 #define CMD_SET_AUTOCONTINUE 50     ///< ID for Command Mavlink message
-
 
 UASWaypointManager::UASWaypointManager(UAS &_uas)
     : uas(_uas),
@@ -48,7 +46,7 @@ UASWaypointManager::UASWaypointManager(UAS &_uas)
       current_wp_id(0),
       current_count(0),
       current_state(WP_IDLE),
-        read_to_view_only(false),
+      read_to_view_only(false),
       current_partner_systemid(0),
       current_partner_compid(0),
       protocol_timer(this)
