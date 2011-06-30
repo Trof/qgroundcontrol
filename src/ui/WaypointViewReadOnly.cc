@@ -99,7 +99,16 @@ case MAV_CMD_NAV_WAYPOINT:
         }
         break;
     }
-
+case MAV_CMD_NAV_LAND:
+    {
+        m_ui->displayBar->setText(QString("LAND. Go to (%1, %2, %3) and descent; yaw: %4").arg(wp->getX()).arg(wp->getY()).arg(wp->getZ()).arg(wp->getParam4()));
+        break;
+    }
+case MAV_CMD_NAV_TAKEOFF:
+    {
+        m_ui->displayBar->setText(QString("TAKEOFF. Go to (%1, %2, %3); yaw: %4").arg(wp->getX()).arg(wp->getY()).arg(wp->getZ()).arg(wp->getParam4()));
+        break;
+    }
 case MAV_CMD_DO_JUMP:
     {
         if (wp->getParam2()>0)
