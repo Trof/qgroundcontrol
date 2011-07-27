@@ -43,77 +43,16 @@ RadioCalibrationWindow::RadioCalibrationWindow(QWidget *parent) :
     connect(transmit, SIGNAL(clicked()), this, SLOT(send()));
     connect(get, SIGNAL(clicked()), this, SLOT(request()));
 
-    connect(aileron, SIGNAL(setpointChanged(int,float)), radio, SLOT(setAileron(int,float)));
-    connect(elevator, SIGNAL(setpointChanged(int,float)), radio, SLOT(setElevator(int,float)));
-    connect(rudder, SIGNAL(setpointChanged(int,float)), radio, SLOT(setRudder(int,float)));
-    connect(gyro, SIGNAL(setpointChanged(int,float)), radio, SLOT(setGyro(int,float)));
-    connect(pitch, SIGNAL(setpointChanged(int,float)), radio, SLOT(setPitch(int,float)));
-    connect(throttle, SIGNAL(setpointChanged(int,float)), radio, SLOT(setThrottle(int,float)));
+    connect(aileron, SIGNAL(setpointChanged(int,uint16_t)), radio, SLOT(setAileron(int,uint16_t)));
+    connect(elevator, SIGNAL(setpointChanged(int,uint16_t)), radio, SLOT(setElevator(int,uint16_t)));
+    connect(rudder, SIGNAL(setpointChanged(int,uint16_t)), radio, SLOT(setRudder(int,uint16_t)));
+    connect(gyro, SIGNAL(setpointChanged(int,uint16_t)), radio, SLOT(setGyro(int,uint16_t)));
+    connect(pitch, SIGNAL(setpointChanged(int,uint16_t)), radio, SLOT(setPitch(int,uint16_t)));
+    connect(throttle, SIGNAL(setpointChanged(int,uint16_t)), radio, SLOT(setThrottle(int,uint16_t)));
     setUASId(0);
 }
 
-//void RadioCalibrationWindow::setChannelRaw(int ch, float raw)
-//{
-//    /** this expects a particular channel to function mapping
-//       \todo allow run-time channel mapping
-//       */
-//    switch (ch)
-//    {
-//    case 0:
-//        aileron->channelChanged(raw);
-//        break;
-//    case 1:
-//        elevator->channelChanged(raw);
-//        break;
-//    case 2:
-//        throttle->channelChanged(raw);
-//        break;
-//    case 3:
-//        rudder->channelChanged(raw);
-//        break;
-//    case 4:
-//        gyro->channelChanged(raw);
-//        break;
-//    case 5:
-//        pitch->channelChanged(raw);
-//        break;
 
-
-//    }
-//}
-
-//void RadioCalibrationWindow::setChannelScaled(int ch, float normalized)
-//{
-// FIXME James
-// FIXME Bryan
-
-//    /** this expects a particular channel to function mapping
-//       \todo allow run-time channel mapping
-//       */
-//    switch (ch)
-//    {
-//    case 0:
-//        aileron->channelChanged(raw);
-//        break;
-//    case 1:
-//        elevator->channelChanged(raw);
-//        break;
-//    case 2:
-//        throttle->channelChanged(raw);
-//        break;
-//    case 3:
-//        rudder->channelChanged(raw);
-//        break;
-//    case 4:
-//        gyro->channelChanged(raw);
-//        break;
-//    case 5:
-//        pitch->channelChanged(raw);
-//        break;
-
-
-//    }
-//}
 
 void RadioCalibrationWindow::setChannel(int ch, float raw)
 {
@@ -313,7 +252,7 @@ void RadioCalibrationWindow::parseSetpoint(const QDomElement &setpoint, const QP
 void RadioCalibrationWindow::send()
 {
     qDebug() << __FILE__ << __LINE__ << "uasId = " << uasId;
-#ifdef MAVLINK_ENABLED_UALBERTA_MESSAGES
+#ifdef MAVLINK_ENABLED_UALBERTA
     UAS *uas = dynamic_cast<UAS*>(UASManager::instance()->getUASForId(uasId));
     if (uas) {
         mavlink_message_t msg;

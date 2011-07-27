@@ -8,7 +8,6 @@ Info.plist
 obj
 *.log
 *~
-*qtc*
 bin/*.exe
 bin/*.txt
 bin/mac
@@ -20,7 +19,7 @@ tmp
 debug
 release
 qgroundcontrol
-mavlinkgen
+mavlinkgen-build-desktop
 *.wav
 qgroundcontrol.xcodeproj/**
 doc/html

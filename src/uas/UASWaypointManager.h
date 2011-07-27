@@ -97,13 +97,16 @@ public:
     //const QVector<Waypoint *> &getWaypointReadOnlyList(void) { return waypoints_readonly; }  ///< Returns a const reference to the waypoint list that is running on MAV.
     const QVector<Waypoint *> getGlobalFrameWaypointList();  ///< Returns a global waypoint list
     const QVector<Waypoint *> getGlobalFrameAndNavTypeWaypointList(); ///< Returns a global waypoint list containing only waypoints suitable for navigation. Actions and other mission items are filtered out.
+    const QVector<Waypoint *> getNavTypeWaypointList(); ///< Returns a waypoint list containing only waypoints suitable for navigation. Actions and other mission items are filtered out.
     int getIndexOf(Waypoint* wp);                   ///< Get the index of a waypoint in the list
     int getGlobalFrameIndexOf(Waypoint* wp);    ///< Get the index of a waypoint in the list, counting only global waypoints
     int getGlobalFrameAndNavTypeIndexOf(Waypoint* wp); ///< Get the index of a waypoint in the list, counting only global AND navigation mode waypoints
+    int getNavTypeIndexOf(Waypoint* wp); ///< Get the index of a waypoint in the list, counting only navigation mode waypoints
     int getLocalFrameIndexOf(Waypoint* wp);     ///< Get the index of a waypoint in the list, counting only local waypoints
     int getMissionFrameIndexOf(Waypoint* wp);   ///< Get the index of a waypoint in the list, counting only mission waypoints
     int getGlobalFrameCount(); ///< Get the count of global waypoints in the list
     int getGlobalFrameAndNavTypeCount(); ///< Get the count of global waypoints in navigation mode in the list
+    int getNavTypeCount(); ///< Get the count of global waypoints in navigation mode in the list
     int getLocalFrameCount();   ///< Get the count of local waypoints in the list
     /*@}*/
 
@@ -136,7 +139,8 @@ public slots:
     /** @name Waypoint list operations */
     /*@{*/
     void addWaypoint(Waypoint *wp, bool enforceFirstActive=true);                 ///< adds a new waypoint to the end of the list and changes its sequence number accordingly
-    void addWaypointReadOnly(Waypoint *wp);
+    void addWaypointReadOnly(Waypoint *wp);                     ///< Adds a new waypoint to the view-tab
+    Waypoint* createWaypoint(bool enforceFirstActive=true);     ///< Creates a waypoint
     int removeWaypoint(quint16 seq);                       ///< locally remove the specified waypoint from the storage
     void moveWaypoint(quint16 cur_seq, quint16 new_seq);   ///< locally move a waypoint from its current position cur_seq to a new position new_seq
     void saveWaypoints(const QString &saveFile);           ///< saves the local waypoint list to saveFile

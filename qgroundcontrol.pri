@@ -29,7 +29,7 @@
 #               $$BASEDIR/lib/openjaus/libopenJaus/include
 
 message(Qt version $$[QT_VERSION])
-message(Using Qt from $QTDIR)
+message(Using Qt from $$[QTDIR])
 
 release {
 #    DEFINES += QT_NO_DEBUG_OUTPUT
@@ -320,7 +320,13 @@ win32-msvc2008 {
 
     message(Building for Windows Visual Studio 2008 (32bit))
 
+    # QAxContainer support is needed for the Internet Control
+    # element showing the Google Earth window
     CONFIG += qaxcontainer
+
+    # The EIGEN library needs this define
+    # to make the internal min/max functions work
+    DEFINES += NOMINMAX
 
     # QWebkit is not needed on MS-Windows compilation environment
     CONFIG -= webkit
@@ -340,7 +346,8 @@ win32-msvc2008 {
                    #"C:\Program Files\Microsoft SDKs\Windows\v7.0\Include"
 
     LIBS += -L$$BASEDIR/lib/sdl/msvc/lib \
-             -lSDLmain -lSDL
+             -lSDLmain -lSDL \
+			 -lsetupapi
 
 exists($$BASEDIR/lib/osg123) {
 message("Building support for OSG")
@@ -398,12 +405,17 @@ win32-g++ {
     CONFIG += CONSOLE
     OUTPUT += CONSOLE
 
+    # The EIGEN library needs this define
+    # to make the internal min/max functions work
+    DEFINES += NOMINMAX
+
     INCLUDEPATH += $$BASEDIR/lib/sdl/include \
                    $$BASEDIR/lib/opal/include #\ #\
                    #"C:\Program Files\Microsoft SDKs\Windows\v7.0\Include"
 
     LIBS += -L$$BASEDIR/lib/sdl/win32 \
-             -lmingw32 -lSDLmain -lSDL -mwindows
+             -lmingw32 -lSDLmain -lSDL -mwindows \
+			 -lsetupapi
 
     CONFIG += windows
 

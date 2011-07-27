@@ -2,11 +2,11 @@
 #define MAV2DICON_H
 
 #include <QGraphicsItem>
-#include "qmapcontrol.h"
 
 #include "UASInterface.h"
+#include "opmapcontrol.h"
 
-class MAV2DIcon : public qmapcontrol::Point
+class MAV2DIcon : public mapcontrol::UAVItem
 {
 public:
     enum {
@@ -27,7 +27,7 @@ public:
      * @param alignment alignment (Middle or TopLeft)
      * @param pen QPen for drawing
      */
-    MAV2DIcon(UASInterface* uas, int radius = 10, int type=0, const QColor& color=QColor(Qt::red), QString name = QString(), Alignment alignment = Middle, QPen* pen=0);
+    MAV2DIcon(mapcontrol::MapGraphicItem* map,mapcontrol::OPMapWidget* parent, UASInterface* uas, int radius = 40, int type=0);
 
     /*!
      *
@@ -37,17 +37,9 @@ public:
      * @param alignment alignment (Middle or TopLeft)
      * @param pen QPen for drawing
      */
-    MAV2DIcon(qreal x, qreal y, QString name = QString(), Alignment alignment = Middle, QPen* pen=0);
+    MAV2DIcon(mapcontrol::MapGraphicItem* map,mapcontrol::OPMapWidget* parent, qreal lat=0, qreal lon=0, qreal alt=0, QColor color=QColor());
 
     virtual ~MAV2DIcon();
-
-    //! sets the QPen which is used for drawing the circle
-    /*!
-     * A QPen can be used to modify the look of the drawn circle
-     * @param pen the QPen which should be used for drawing
-     * @see http://doc.trolltech.com/4.3/qpen.html
-     */
-    virtual void setPen(QPen* pen);
 
     /** @brief Mark this system as selected */
     void setSelectedUAS(bool selected);
@@ -62,10 +54,7 @@ public:
         return uasid;
     }
 
-    void drawIcon(QPen* pen);
-    void drawIcon() {
-        drawIcon(mypen);
-    }
+    void drawIcon();
     static void drawAirframePolygon(int airframe, QPainter& painter, int radius, QColor& iconColor, float yaw);
 
 protected:
@@ -76,6 +65,7 @@ protected:
     QColor iconColor; ///< Color to be used for the icon
     bool selected;  ///< Wether this is the system currently in focus
     int uasid;      ///< ID of tracked system
+    QSize size;
 
 };
 

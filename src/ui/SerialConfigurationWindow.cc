@@ -36,7 +36,7 @@ This file is part of the QGROUNDCONTROL project
 #include <QSettings>
 #include <QFileInfoList>
 #ifdef _WIN32
-#include <QextSerialEnumerator.h>
+#include <qextserialenumerator.h>
 #endif
 #if defined (__APPLE__) && defined (__MACH__)
 #include <stdio.h>
@@ -398,7 +398,7 @@ void SerialConfigurationWindow::setupPortList()
     QFileInfoList list = dir.entryInfoList();
     for (int i = 0; i < list.size(); ++i) {
         QFileInfo fileInfo = list.at(i);
-        if (fileInfo.fileName().contains(QString("ttyUSB")) || fileInfo.fileName().contains(QString("ttyS"))) {
+        if (fileInfo.fileName().contains(QString("ttyUSB")) || fileInfo.fileName().contains(QString("ttyS")) || fileInfo.fileName().contains(QString("ttyACM"))) {
             if (ui.portName->findText(fileInfo.canonicalFilePath()) == -1) {
                 ui.portName->addItem(fileInfo.canonicalFilePath());
                 if (!userConfigured) ui.portName->setEditText(fileInfo.canonicalFilePath());
@@ -439,7 +439,7 @@ void SerialConfigurationWindow::setupPortList()
     QFileInfoList list = dir.entryInfoList();
     for (int i = list.size() - 1; i >= 0; i--) {
         QFileInfo fileInfo = list.at(i);
-        if (fileInfo.fileName().contains(QString("ttyUSB")) || fileInfo.fileName().contains(QString("ttyS")) || fileInfo.fileName().contains(QString("tty.usbserial"))) {
+        if (fileInfo.fileName().contains(QString("ttyUSB")) || fileInfo.fileName().contains(QString("ttyS")) || fileInfo.fileName().contains(QString("tty.usbserial")) || fileInfo.fileName().contains(QString("ttyACM"))) {
             if (ui.portName->findText(fileInfo.canonicalFilePath()) == -1) {
                 ui.portName->addItem(fileInfo.canonicalFilePath());
                 if (!userConfigured) ui.portName->setEditText(fileInfo.canonicalFilePath());

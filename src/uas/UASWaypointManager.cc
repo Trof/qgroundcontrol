@@ -343,7 +343,9 @@ int UASWaypointManager::setCurrentWaypoint(quint16 seq)
 
 
 /**
+ * @warning Make sure the waypoint stays valid for the whole application lifecycle!
  * @param enforceFirstActive Enforces that the first waypoint is set as active
+ * @see createWaypoint() is more suitable for most use cases
  */
 void UASWaypointManager::addWaypoint(Waypoint *wp, bool enforceFirstActive)
 {
@@ -369,12 +371,30 @@ void UASWaypointManager::addWaypointReadOnly(Waypoint *wp)
 
         //if (enforceFirstActive && waypoints.size() == 0) wp->setCurrent(true);
         waypoints_readonly.insert(waypoints_readonly.size(), wp);
-
+        
         connect(wp, SIGNAL(changed(Waypoint*)), this, SLOT(notifyOfChange(Waypoint*)));
 
         emit waypointReadOnlyListChanged();
     }
 }
+    
+        
+/**
+ * @param enforceFirstActive Enforces that the first waypoint is set as active
+ */
+Waypoint* UASWaypointManager::createWaypoint(bool enforceFirstActive)
+{
+    Waypoint* wp = new Waypoint();
+    wp->setId(waypoints.size());
+    if (enforceFirstActive && waypoints.size() == 0) wp->setCurrent(true);
+    waypoints.insert(waypoints.size(), wp);
+    //connect(wp, SIGNAL(changed(Waypoint*)), this, SLOT(notifyOfChange(Waypoint*)));
+
+    emit waypointListChanged();
+    emit waypointListChanged(uas.getUASID());
+    return wp;
+}
+
 
 int UASWaypointManager::removeWaypoint(quint16 seq)
 {
@@ -382,6 +402,7 @@ int UASWaypointManager::removeWaypoint(quint16 seq)
         Waypoint *t = waypoints[seq];
         waypoints.remove(seq);
         delete t;
+        t = NULL;
 
         for(int i = seq; i < waypoints.size(); i++) {
             waypoints[i]->setId(i);
@@ -538,6 +559,20 @@ const QVector<Waypoint *> UASWaypointManager::getGlobalFrameAndNavTypeWaypointLi
     return wps;
 }
 
+const QVector<Waypoint *> UASWaypointManager::getNavTypeWaypointList()
+{
+    // TODO Keep this global frame list up to date
+    // with complete waypoint list
+    // instead of filtering on each request
+    QVector<Waypoint*> wps;
+    foreach (Waypoint* wp, waypoints) {
+        if (wp->isNavigationType()) {
+            wps.append(wp);
+        }
+    }
+    return wps;
+}
+
 int UASWaypointManager::getIndexOf(Waypoint* wp)
 {
     return waypoints.indexOf(wp);
@@ -577,6 +612,23 @@ int UASWaypointManager::getGlobalFrameAndNavTypeIndexOf(Waypoint* wp)
     return -1;
 }
 
+int UASWaypointManager::getNavTypeIndexOf(Waypoint* wp)
+{
+    // Search through all waypoints,
+    // counting only those in global frame
+    int i = 0;
+    foreach (Waypoint* p, waypoints) {
+        if (p->isNavigationType()) {
+            if (p == wp) {
+                return i;
+            }
+            i++;
+        }
+    }
+
+    return -1;
+}
+
 int UASWaypointManager::getGlobalFrameCount()
 {
     // Search through all waypoints,
@@ -598,6 +650,20 @@ int UASWaypointManager::getGlobalFrameAndNavTypeCount()
     int i = 0;
     foreach (Waypoint* p, waypoints) {
         if (p->getFrame() == MAV_FRAME_GLOBAL && p->isNavigationType()) {
+            i++;
+        }
+    }
+
+    return i;
+}
+
+int UASWaypointManager::getNavTypeCount()
+{
+    // Search through all waypoints,
+    // counting only those in global frame
+    int i = 0;
+    foreach (Waypoint* p, waypoints) {
+        if (p->isNavigationType()) {
             i++;
         }
     }
