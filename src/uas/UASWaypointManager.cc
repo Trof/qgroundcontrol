@@ -38,12 +38,15 @@ This file is part of the QGROUNDCONTROL project
 #define PROTOCOL_DELAY_MS 40        ///< minimum delay between sent messages
 #define PROTOCOL_MAX_RETRIES 3      ///< maximum number of send retries (after timeout)
 
+#define CMD_SET_AUTOCONTINUE 50     ///< ID for Command Mavlink message
+
 UASWaypointManager::UASWaypointManager(UAS &_uas)
     : uas(_uas),
       current_retries(0),
       current_wp_id(0),
       current_count(0),
       current_state(WP_IDLE),
+      read_to_view_only(false),
       current_partner_systemid(0),
       current_partner_compid(0),
       protocol_timer(this),
@@ -131,6 +134,8 @@ void UASWaypointManager::handleWaypointCount(quint8 systemId, quint8 compId, qui
             current_wp_id = 0;
             current_partner_systemid = 0;
             current_partner_compid = 0;
+
+            emit waypointReadOnlyListChanged();
         }
     } else {
         qDebug("Rejecting message, check mismatch: current_state: %d == %d, system id %d == %d, comp id %d == %d", current_state, WP_GETLIST, current_partner_systemid, systemId, current_partner_compid, compId);
@@ -139,15 +144,32 @@ void UASWaypointManager::handleWaypointCount(quint8 systemId, quint8 compId, qui
 
 void UASWaypointManager::handleWaypoint(quint8 systemId, quint8 compId, mavlink_waypoint_t *wp)
 {
-    if (systemId == current_partner_systemid && compId == current_partner_compid && current_state == WP_GETLIST_GETWPS && wp->seq == current_wp_id) {
+    if (systemId == current_partner_systemid && compId == current_partner_compid && current_state == WP_GETLIST_GETWPS)
+    {
         protocol_timer.start(PROTOCOL_TIMEOUT_MS);
         current_retries = PROTOCOL_MAX_RETRIES;
 
         if(wp->seq == current_wp_id) {
-            //// qDebug() << "Got WP: " << wp->seq << wp->x <<  wp->y << wp->z << wp->param4 << "auto:" << wp->autocontinue << "curr:" << wp->current << wp->param1 << wp->param2 << "Frame:"<< (MAV_FRAME) wp->frame << "Command:" << (MAV_CMD) wp->command;
-            Waypoint *lwp = new Waypoint(wp->seq, wp->x, wp->y, wp->z, wp->param1, wp->param2, wp->param3, wp->param4, wp->autocontinue, wp->current, (MAV_FRAME) wp->frame, (MAV_CMD) wp->command);
-            addWaypoint(lwp, false);
-            if (wp->current == 1) currentWaypoint = lwp;
+            //qDebug() << "Got WP: " << wp->seq << wp->x <<  wp->y << wp->z << wp->param4 << "auto:" << wp->autocontinue << "curr:" << wp->current << wp->param1 << wp->param2 << "Frame:"<< (MAV_FRAME) wp->frame << "Command:" << (MAV_CMD) wp->command;
+            
+            Waypoint *lwp;
+            Waypoint* wp_readonly;
+
+            if (read_to_view_only==false)
+            {
+                lwp = new Waypoint(wp->seq, wp->x, wp->y, wp->z, wp->param1, wp->param2, wp->param3, wp->param4, wp->autocontinue, wp->current, (MAV_FRAME) wp->frame, (MAV_CMD) wp->command);
+                wp_readonly = new Waypoint(wp->seq, wp->x, wp->y, wp->z, wp->param1, wp->param2, wp->param3, wp->param4, wp->autocontinue, wp->current, (MAV_FRAME) wp->frame, (MAV_CMD) wp->command);
+                addWaypoint(lwp, false);
+                addWaypointReadOnly(wp_readonly);
+            }
+            else
+            {
+                wp_readonly = new Waypoint(wp->seq, wp->x, wp->y, wp->z, wp->param1, wp->param2, wp->param3, wp->param4, wp->autocontinue, wp->current, (MAV_FRAME) wp->frame, (MAV_CMD) wp->command);
+                addWaypointReadOnly(wp_readonly);
+            }
+
+            if (wp->current == 1) currentWaypoint = wp_readonly;
+            //emit updateWaypointViewList(lwp);
 
             //get next waypoint
             current_wp_id++;
@@ -197,6 +219,20 @@ void UASWaypointManager::handleWaypointAck(quint8 systemId, quint8 compId, mavli
     }
 }
 
+void UASWaypointManager::handleCommandAck(quint8 systemId, quint8 compId, mavlink_command_ack_t *cmda)
+{
+    if (systemId == current_partner_systemid && compId == current_partner_compid)
+    {
+        if(current_state == WP_COMMAND)
+        {
+            protocol_timer.stop();
+            current_state = WP_IDLE;
+            emit updateStatusString("done.");
+            qDebug() << "received command("<< cmda->command <<") ack from ID " << systemId << ". result: " << cmda->result;
+        }
+    }
+}
+
 void UASWaypointManager::handleWaypointRequest(quint8 systemId, quint8 compId, mavlink_waypoint_request_t *wpr)
 {
     if (systemId == current_partner_systemid && compId == current_partner_compid && ((current_state == WP_SENDLIST && wpr->seq == 0) || (current_state == WP_SENDLIST_SENDWPS && (wpr->seq == current_wp_id || wpr->seq == current_wp_id + 1)))) {
@@ -231,14 +267,14 @@ void UASWaypointManager::handleWaypointCurrent(quint8 systemId, quint8 compId, m
             current_state = WP_IDLE;
 
             // update the local main storage
-            if (wpc->seq < waypoints.size()) {
-                for(int i = 0; i < waypoints.size(); i++) {
-                    if (waypoints[i]->getId() == wpc->seq) {
-                        waypoints[i]->setCurrent(true);
+            if (wpc->seq < waypoints_readonly.size()) {
+                for(int i = 0; i < waypoints_readonly.size(); i++) {
+                    if (waypoints_readonly[i]->getId() == wpc->seq) {
+                        waypoints_readonly[i]->setCurrent(true);
                         currentWaypoint = waypoints[i];
 
                     } else {
-                        waypoints[i]->setCurrent(false);
+                        waypoints_readonly[i]->setCurrent(false);
                     }
                 }
             }
@@ -259,22 +295,61 @@ void UASWaypointManager::notifyOfChange(Waypoint* wp)
     if (wp != NULL) {
         emit waypointChanged(uas.getUASID(), wp);
     } else {
-        emit waypointListChanged();
-        emit waypointListChanged(uas.getUASID());
+        emit waypointReadOnlyListChanged();
+        //emit waypointListChanged(uas.getUASID());
     }
 }
 
-int UASWaypointManager::setCurrentWaypoint(quint16 seq)
+int UASWaypointManager::setAutoContinue(quint16 seq, bool state)
 {
-    if (seq < waypoints.size()) {
+    protocol_timer.start(PROTOCOL_TIMEOUT_MS);
+    current_retries = PROTOCOL_MAX_RETRIES;
+
+    current_state = WP_COMMAND;
+    current_partner_systemid = uas.getUASID();
+    current_partner_compid = MAV_COMP_ID_WAYPOINTPLANNER;
+    sendWaypointSetAutoContinue (seq,state);
+    //emit waypointReadOnlyListChanged();
+}
+
+int UASWaypointManager::setCurrentWaypointEditOnly(quint16 seq)
+{
+    qDebug() << "Trof: UASWaypointManager::setCurrentWaypointEditOnly ID:" << seq;
         if(current_state == WP_IDLE) {
             //update local main storage
             for(int i = 0; i < waypoints.size(); i++) {
                 if (waypoints[i]->getId() == seq) {
                     waypoints[i]->setCurrent(true);
-                    currentWaypoint = waypoints[i];
+                    
                 } else {
                     waypoints[i]->setCurrent(false);
+                }
+            }
+            emit waypointListChanged();
+            return 0;
+        }    
+    return -1;
+}
+
+int UASWaypointManager::setCurrentWaypoint(quint16 seq)
+{
+    qDebug() << "Trof: UASWaypointManager::setCurrentWaypoint ID:" << seq;
+    if (seq < waypoints_readonly.size())
+    {
+        if(current_state == WP_IDLE)
+        {
+            //update local main storage
+            for(int i = 0; i < waypoints_readonly.size(); i++)
+            {
+                if (waypoints_readonly[i]->getId() == seq)
+                {
+                    waypoints_readonly[i]->setCurrent(true);
+                    currentWaypoint = waypoints[i];
+
+                }
+                else
+                {
+                    waypoints_readonly[i]->setCurrent(false);
                 }
             }
 
@@ -291,13 +366,14 @@ int UASWaypointManager::setCurrentWaypoint(quint16 seq)
 
             sendWaypointSetCurrent(current_wp_id);
 
-            //emit waypointListChanged();
+            emit waypointReadOnlyListChanged();
 
             return 0;
         }
     }
     return -1;
 }
+
 
 /**
  * @warning Make sure the waypoint stays valid for the whole application lifecycle!
@@ -306,21 +382,39 @@ int UASWaypointManager::setCurrentWaypoint(quint16 seq)
  */
 void UASWaypointManager::addWaypoint(Waypoint *wp, bool enforceFirstActive)
 {
-    if (wp) {
+    if (wp)
+    {
         wp->setId(waypoints.size());
-        if (enforceFirstActive && waypoints.size() == 0)
-        {
-            wp->setCurrent(true);
-            currentWaypoint = wp;
-        }
+        if (enforceFirstActive && waypoints.size() == 0) wp->setCurrent(true);
         waypoints.insert(waypoints.size(), wp);
-        connect(wp, SIGNAL(changed(Waypoint*)), this, SLOT(notifyOfChange(Waypoint*)));
+        //connect(wp, SIGNAL(changed(Waypoint*)), this, SLOT(notifyOfChange(Waypoint*)));
 
         emit waypointListChanged();
         emit waypointListChanged(uas.getUASID());
     }
 }
 
+void UASWaypointManager::addWaypointReadOnly(Waypoint *wp)
+{
+    if (wp)
+    {        
+        qDebug() << "Trof: UASWaypointManager::addWaypointReadOnly ID: " << wp->getId();
+        //qDebug() << "Got WP: " << wp->seq << wp->x <<  wp->y << wp->z << wp->param4 << "auto:" << wp->autocontinue << "curr:" << wp->current << wp->param1 << wp->param2 << (MAV_FRAME) wp->frame << (MAV_CMD) wp->command;
+        wp->setId(waypoints_readonly.size());
+
+        if (waypoints.size() == 0){
+         wp->setCurrent(true);
+         currentWaypoint = wp;
+         }
+        waypoints_readonly.insert(waypoints_readonly.size(), wp);
+        
+        connect(wp, SIGNAL(changed(Waypoint*)), this, SLOT(notifyOfChange(Waypoint*)));
+
+        emit waypointReadOnlyListChanged();
+    }
+}
+    
+        
 /**
  * @param enforceFirstActive Enforces that the first waypoint is set as active
  */
@@ -334,12 +428,13 @@ Waypoint* UASWaypointManager::createWaypoint(bool enforceFirstActive)
         currentWaypoint = wp;
     }
     waypoints.insert(waypoints.size(), wp);
-    connect(wp, SIGNAL(changed(Waypoint*)), this, SLOT(notifyOfChange(Waypoint*)));
+    //connect(wp, SIGNAL(changed(Waypoint*)), this, SLOT(notifyOfChange(Waypoint*)));
 
     emit waypointListChanged();
     emit waypointListChanged(uas.getUASID());
     return wp;
 }
+
 
 int UASWaypointManager::removeWaypoint(quint16 seq)
 {
@@ -667,11 +762,20 @@ int UASWaypointManager::getMissionFrameIndexOf(Waypoint* wp)
 void UASWaypointManager::readWaypoints()
 {
     emit readGlobalWPFromUAS(true);
-    if(current_state == WP_IDLE) {
-        while(waypoints.size()>0) {
+    if(current_state == WP_IDLE)
+    {
+        read_to_view_only = false;
+        while(waypoints.size()>0)
+        {
             delete waypoints.back();
             waypoints.pop_back();
 
+        }
+
+        while(waypoints_readonly.size()>0)
+        {
+            delete waypoints_readonly.back();
+            waypoints_readonly.pop_back();
         }
 
         protocol_timer.start(PROTOCOL_TIMEOUT_MS);
@@ -684,6 +788,30 @@ void UASWaypointManager::readWaypoints()
 
         sendWaypointRequestList();
 
+    }
+}
+
+void UASWaypointManager::refreshWaypointsReadOnly()
+{
+
+    emit readGlobalWPFromUAS(true);
+    if(current_state == WP_IDLE)
+    {
+        read_to_view_only = true;
+        while(waypoints_readonly.size()>0)
+        {
+            delete waypoints_readonly.back();
+            waypoints_readonly.pop_back();
+        }
+        protocol_timer.start(PROTOCOL_TIMEOUT_MS);
+        current_retries = PROTOCOL_MAX_RETRIES;
+
+        current_state = WP_GETLIST;
+        current_wp_id = 0;
+        current_partner_systemid = uas.getUASID();
+        current_partner_compid = MAV_COMP_ID_WAYPOINTPLANNER;
+
+        sendWaypointRequestList();
     }
 }
 
@@ -718,7 +846,6 @@ void UASWaypointManager::writeWaypoints()
                 mavlink_waypoint_t *cur_d = waypoint_buffer.back();
                 memset(cur_d, 0, sizeof(mavlink_waypoint_t));   //initialize with zeros
                 const Waypoint *cur_s = waypoints.at(i);
-
                 cur_d->autocontinue = cur_s->getAutoContinue();
                 cur_d->current = cur_s->getCurrent() & noCurrent;   //make sure only one current waypoint is selected, the first selected will be chosen
                 cur_d->param1 = cur_s->getParam1();
@@ -767,6 +894,26 @@ void UASWaypointManager::sendWaypointClearAll()
     MG::SLEEP::usleep(PROTOCOL_DELAY_MS * 1000);
 
     // qDebug() << "sent waypoint clear all to ID " << wpca.target_system;
+}
+
+void UASWaypointManager::sendWaypointSetAutoContinue(quint16 seq, bool state)
+{
+    mavlink_message_t message;
+    mavlink_command_t wpsa;
+
+    wpsa.target_system = uas.getUASID();
+    wpsa.target_component = MAV_COMP_ID_WAYPOINTPLANNER;
+    wpsa.command = CMD_SET_AUTOCONTINUE;
+    wpsa.param1 = seq;
+    wpsa.param2 = state;
+
+    emit updateStatusString(QString("Updating target waypoint..."));
+
+    mavlink_msg_command_encode(uas.mavlink->getSystemId(), uas.mavlink->getComponentId(), &message, &wpsa);
+    uas.sendMessage(message);
+    MG::SLEEP::usleep(PROTOCOL_DELAY_MS * 1000);
+
+    qDebug() << "sent command to set autocontinue of waypoint (" << wpsa.param1 << ") to "<< wpsa.param2 << ", to ID " << wpsa.target_system;
 }
 
 void UASWaypointManager::sendWaypointSetCurrent(quint16 seq)

@@ -197,7 +197,8 @@ void Waypoint::setFrame(MAV_FRAME frame)
 
 void Waypoint::setAutocontinue(bool autoContinue)
 {
-    if (this->autocontinue != autocontinue) {
+    if (this->autocontinue != autoContinue)
+    {
         this->autocontinue = autoContinue;
         emit changed(this);
     }

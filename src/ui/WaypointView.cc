@@ -358,11 +358,22 @@ void WaypointView::changedFrame(int index)
 
 void WaypointView::changedCurrent(int state)
 {
-    if (state == 0) {
-        m_ui->selectedBox->setChecked(true);
-        m_ui->selectedBox->setCheckState(Qt::Checked);
-        wp->setCurrent(false);
-    } else {
+    if (state == 0)
+    {
+        if (wp->getCurrent() == true) //User clicked on the waypoint, that is already current
+        {
+            m_ui->selectedBox->setChecked(true);
+            m_ui->selectedBox->setCheckState(Qt::Checked);
+        }
+        else
+        {
+            m_ui->selectedBox->setChecked(false);
+            m_ui->selectedBox->setCheckState(Qt::Unchecked);
+            wp->setCurrent(false);
+        }
+    }
+    else
+    {
         wp->setCurrent(true);
         emit changeCurrentWaypoint(wp->getId());   //the slot changeCurrentWaypoint() in WaypointList sets all other current flags to false
     }
@@ -370,6 +381,7 @@ void WaypointView::changedCurrent(int state)
 
 void WaypointView::updateValues()
 {
+    qDebug() << "Trof: WaypointView::updateValues() ID:" << wp->getId();
     // Check if we just lost the wp, delete the widget
     // accordingly
     if (!wp) {

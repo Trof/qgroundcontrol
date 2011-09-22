@@ -109,10 +109,10 @@ QPushButton:pressed {
          <enum>Qt::TabFocus</enum>
         </property>
         <property name="toolTip">
-         <string>Currently selected waypoint</string>
+         <string>Starting waypoint</string>
         </property>
         <property name="statusTip">
-         <string>Currently selected waypoint</string>
+         <string>Starting waypoint</string>
         </property>
         <property name="text">
          <string/>
@@ -237,10 +237,10 @@ QPushButton:pressed {
          <enum>Qt::WheelFocus</enum>
         </property>
         <property name="toolTip">
-         <string>Position Y/Longitude coordinate</string>
+         <string>Position Y coordinate</string>
         </property>
         <property name="statusTip">
-         <string>Position Y/Longitude coordinate</string>
+         <string>Position Y coordinate</string>
         </property>
         <property name="prefix">
          <string>E </string>
@@ -277,7 +277,7 @@ QPushButton:pressed {
          <string>Position Z coordinate (local frame, negative)</string>
         </property>
         <property name="statusTip">
-         <string/>
+         <string>Position Z coordinate (local frame, negative)</string>
         </property>
         <property name="prefix">
          <string>D </string>

@@ -21,6 +21,7 @@ public:
 public slots:
     void sendCommand();
     void setCommandButtonName(QString text);
+    void showCommandIdEdit();
     void startEditMode();
     void endEditMode();
     void writeSettings(QSettings& settings);

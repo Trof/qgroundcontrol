@@ -15,9 +15,11 @@ QGCCommandButton::QGCCommandButton(QWidget *parent) :
     connect(ui->editFinishButton, SIGNAL(clicked()), this, SLOT(endEditMode()));
     connect(ui->editButtonName, SIGNAL(textChanged(QString)), this, SLOT(setCommandButtonName(QString)));
     connect(ui->editCommandComboBox, SIGNAL(currentIndexChanged(QString)), ui->nameLabel, SLOT(setText(QString)));
+    connect(ui->editCommandComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(showCommandIdEdit()));
 
     // Hide all edit items
     ui->editCommandComboBox->hide();
+    ui->editCommandIdSpinBox->hide();
     ui->editFinishButton->hide();
     ui->editNameLabel->hide();
     ui->editButtonName->hide();
@@ -37,7 +39,7 @@ QGCCommandButton::QGCCommandButton(QWidget *parent) :
     // Add commands to combo box
     ui->editCommandComboBox->addItem("DO: Control Video", MAV_CMD_DO_CONTROL_VIDEO);
     ui->editCommandComboBox->addItem("PREFLIGHT: Calibration", MAV_CMD_PREFLIGHT_CALIBRATION);
-    ui->editCommandComboBox->addItem("CUSTOM 0", 0);
+    ui->editCommandComboBox->addItem("CUSTOM 0", 0);    
     ui->editCommandComboBox->addItem("CUSTOM 1", 1);
     ui->editCommandComboBox->addItem("CUSTOM 2", 2);
     ui->editCommandComboBox->addItem("CUSTOM 3", 3);
@@ -53,6 +55,8 @@ QGCCommandButton::QGCCommandButton(QWidget *parent) :
     ui->editCommandComboBox->addItem("CUSTOM 13", 13);
     ui->editCommandComboBox->addItem("CUSTOM 14", 14);
     ui->editCommandComboBox->addItem("CUSTOM 15", 15);
+    ui->editCommandComboBox->addItem("Other", MAV_CMD_ENUM_END);
+
     ui->editCommandComboBox->setEditable(true);
 }
 
@@ -64,9 +68,18 @@ QGCCommandButton::~QGCCommandButton()
 void QGCCommandButton::sendCommand()
 {
     if (QGCToolWidgetItem::uas) {
-        // FIXME
+        // FIXME        
         int index = ui->editCommandComboBox->itemData(ui->editCommandComboBox->currentIndex()).toInt();
         MAV_CMD command = static_cast<MAV_CMD>(index);
+        if (index == MAV_CMD_ENUM_END)
+        {
+           int other_command = ui->editCommandIdSpinBox->value();
+           command = static_cast<MAV_CMD>(other_command);
+        }
+        else
+        {
+           command = static_cast<MAV_CMD>(index);
+        }
         int confirm = (ui->editConfirmationCheckBox->isChecked()) ? 1 : 0;
         float param1 = ui->editParam1SpinBox->value();
         float param2 = ui->editParam2SpinBox->value();
@@ -85,12 +98,25 @@ void QGCCommandButton::setCommandButtonName(QString text)
     ui->commandButton->setText(text);
 }
 
+void QGCCommandButton::showCommandIdEdit()
+{
+    int msg_command_id = ui->editCommandComboBox->itemData(ui->editCommandComboBox->currentIndex()).toInt();
+    qDebug() << "SHOW COMMAND ID" <<  msg_command_id;
+    if (msg_command_id == MAV_CMD_ENUM_END)
+    {
+        ui->editCommandIdSpinBox->show();
+    }
+    else
+    {
+        ui->editCommandIdSpinBox->hide();
+    }
+}
+
 void QGCCommandButton::startEditMode()
 {
     // Hide elements
     ui->commandButton->hide();
-    ui->nameLabel->hide();
-
+    ui->nameLabel->hide();    
     ui->editCommandComboBox->show();
     ui->editFinishButton->show();
     ui->editNameLabel->show();
@@ -104,6 +130,7 @@ void QGCCommandButton::startEditMode()
     ui->editParam4SpinBox->show();
     ui->editLine1->show();
     ui->editLine2->show();
+    this->showCommandIdEdit();
     //setStyleSheet("QGroupBox { border: 1px solid #66666B; border-radius: 3px; padding: 10px 0px 0px 0px; background: #111122; }");
     isInEditMode = true;
 }
@@ -111,6 +138,7 @@ void QGCCommandButton::startEditMode()
 void QGCCommandButton::endEditMode()
 {
     ui->editCommandComboBox->hide();
+    ui->editCommandIdSpinBox->hide();
     ui->editFinishButton->hide();
     ui->editNameLabel->hide();
     ui->editButtonName->hide();
@@ -155,6 +183,7 @@ void QGCCommandButton::readSettings(const QSettings& settings)
     ui->commandButton->setText(settings.value("QGC_ACTION_BUTTON_BUTTONTEXT", "UNKNOWN").toString());
     ui->editCommandComboBox->setCurrentIndex(settings.value("QGC_ACTION_BUTTON_ACTIONID", 0).toInt());
     ui->editParamsVisibleCheckBox->setChecked(settings.value("QGC_COMMAND_BUTTON_PARAMS_VISIBLE").toBool());
+    ui->editCommandIdSpinBox->hide();
     if (ui->editParamsVisibleCheckBox->isChecked()) {
         ui->editParam1SpinBox->show();
         ui->editParam2SpinBox->show();

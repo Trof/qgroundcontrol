@@ -206,6 +206,7 @@ FORMS += src/ui/MainWindow.ui \
     src/ui/UASControlParameters.ui \
     src/ui/mission/QGCMissionDoWidget.ui \
     src/ui/mission/QGCMissionConditionWidget.ui \
+    src/ui/WaypointViewReadOnly.ui \
     src/ui/map/QGCMapTool.ui \
     src/ui/map/QGCMapToolBar.ui
 INCLUDEPATH += src \
@@ -314,6 +315,7 @@ HEADERS += src/MG.h \
     src/ui/mission/QGCMissionDoWidget.h \
     src/ui/mission/QGCMissionConditionWidget.h \
     src/uas/QGCUASParamManager.h \
+    src/ui/WaypointViewReadOnly.h \
     src/ui/map/QGCMapWidget.h \
     src/ui/map/MAV2DIcon.h \
     src/ui/map/Waypoint2DIcon.h \
@@ -441,6 +443,7 @@ SOURCES += src/main.cc \
     src/ui/mission/QGCMissionDoWidget.cc \
     src/ui/mission/QGCMissionConditionWidget.cc \
     src/uas/QGCUASParamManager.cc \
+    src/ui/WaypointViewReadOnly.cc \
     src/ui/map/QGCMapWidget.cc \
     src/ui/map/MAV2DIcon.cc \
     src/ui/map/Waypoint2DIcon.cc \

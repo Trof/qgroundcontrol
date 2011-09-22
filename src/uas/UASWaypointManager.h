@@ -60,7 +60,8 @@ private:
         WP_GETLIST,         ///< Initial state for retrieving wayppoints from the MAV
         WP_GETLIST_GETWPS,  ///< Receiving waypoints
         WP_CLEARLIST,       ///< Clearing waypoint list on the MAV
-        WP_SETCURRENT       ///< Setting new current waypoint on the MAV
+        WP_SETCURRENT,       ///< Setting new current waypoint on the MAV
+        WP_COMMAND          ///< Sending some command message to the MAV
     }; ///< The possible states for the waypoint protocol
 
 public:
@@ -74,21 +75,27 @@ public:
     void handleWaypointRequest(quint8 systemId, quint8 compId, mavlink_waypoint_request_t *wpr);        ///< Handles received waypoint request messages
     void handleWaypointReached(quint8 systemId, quint8 compId, mavlink_waypoint_reached_t *wpr);        ///< Handles received waypoint reached messages
     void handleWaypointCurrent(quint8 systemId, quint8 compId, mavlink_waypoint_current_t *wpc);        ///< Handles received set current waypoint messages
+    void handleCommandAck(quint8 systemId, quint8 compId, mavlink_command_ack_t *cmda);                 ///< Handles received command ack messages
     /*@}*/
 
     /** @name Remote operations */
     /*@{*/
     void clearWaypointList();                       ///< Sends the waypoint clear all message to the MAV
-    void readWaypoints();                           ///< Requests the MAV's current waypoint list
+    void readWaypoints();                           ///< Requests the MAV's current waypoint list and updates both edit and view tab
+    void refreshWaypointsReadOnly();                ///< Requests the MAV's current waypoint list and updates only view tab
     void writeWaypoints();                          ///< Sends the waypoint list to the MAV
-    int setCurrentWaypoint(quint16 seq);            ///< Changes the current waypoint and sends the sequence number of the waypoint that should get the new target waypoint to the UAS
+    int setCurrentWaypoint(quint16 seq);            ///< Changes the current waypoint in view tab and sends new current waypoint to the MAV
+    int setCurrentWaypointEditOnly(quint16 seq);    ///< Changes the current waypoint in edit tab
+    int setAutoContinue(quint16 seq, bool state);    ///< Sends the new AutoContinue value for a certain waypoint to the MAV
     /*@}*/
 
     /** @name Waypoint list operations */
     /*@{*/
-    const QVector<Waypoint *> &getWaypointList(void) {
-        return waypoints;    ///< Returns a const reference to the waypoint list.
-    }
+    const QVector<Waypoint *> &getWaypointList(void) { return waypoints_readonly; }  ///< Returns a const reference to the waypoint list that is running on MAV.
+    const QVector<Waypoint *> &getWaypointEditList(void) { return waypoints; }  ///< Returns a const reference to the edited waypoint list.
+
+    //const QVector<Waypoint *> &getWaypointList(void) { return waypoints; }  ///< Returns a const reference to the edited waypoint list.
+    //const QVector<Waypoint *> &getWaypointReadOnlyList(void) { return waypoints_readonly; }  ///< Returns a const reference to the waypoint list that is running on MAV.
     const QVector<Waypoint *> getGlobalFrameWaypointList();  ///< Returns a global waypoint list
     const QVector<Waypoint *> getGlobalFrameAndNavTypeWaypointList(); ///< Returns a global waypoint list containing only waypoints suitable for navigation. Actions and other mission items are filtered out.
     const QVector<Waypoint *> getNavTypeWaypointList(); ///< Returns a waypoint list containing only waypoints suitable for navigation. Actions and other mission items are filtered out.
@@ -120,6 +127,7 @@ private:
     /*@{*/
     void sendWaypointClearAll();
     void sendWaypointSetCurrent(quint16 seq);
+    void sendWaypointSetAutoContinue(quint16 seq, bool state);
     void sendWaypointCount();
     void sendWaypointRequestList();
     void sendWaypointRequest(quint16 seq);          ///< Requests a waypoint with sequence number seq
@@ -132,6 +140,7 @@ public slots:
     /** @name Waypoint list operations */
     /*@{*/
     void addWaypoint(Waypoint *wp, bool enforceFirstActive=true);                 ///< adds a new waypoint to the end of the list and changes its sequence number accordingly
+    void addWaypointReadOnly(Waypoint *wp);                     ///< Adds a new waypoint to the view-tab
     Waypoint* createWaypoint(bool enforceFirstActive=true);     ///< Creates a waypoint
     int removeWaypoint(quint16 seq);                       ///< locally remove the specified waypoint from the storage
     void moveWaypoint(quint16 cur_seq, quint16 new_seq);   ///< locally move a waypoint from its current position cur_seq to a new position new_seq
@@ -143,8 +152,9 @@ public slots:
     void handleGlobalPositionChanged(UASInterface* mav, double lat, double lon, double alt, quint64 time);
 
 signals:
-    void waypointListChanged(void);                 ///< emits signal that the waypoint list has been changed
+    void waypointListChanged(void);                 ///< emits signal that the waypoint list (edit) has been changed
     void waypointListChanged(int uasid);            ///< Emits signal that list has been changed
+    void waypointReadOnlyListChanged(void);         ///< emits signal that the waypoint list (view) has been changed
     void waypointChanged(int uasid, Waypoint* wp);  ///< emits signal that waypoint has been changed
     void currentWaypointChanged(quint16);           ///< emits the new current waypoint sequence number
     void updateStatusString(const QString &);       ///< emits the current status string
@@ -152,6 +162,8 @@ signals:
 
     void loadWPFile();                              ///< emits signal that a file wp has been load
     void readGlobalWPFromUAS(bool value);           ///< emits signal when finish to read Global WP from UAS
+
+    void updateWaypointViewList(Waypoint* wp);
 
 private:
     UAS &uas;                                       ///< Reference to the corresponding UAS
@@ -161,8 +173,10 @@ private:
     WaypointState current_state;                    ///< The current protocol state
     quint8 current_partner_systemid;                ///< The current protocol communication target system
     quint8 current_partner_compid;                  ///< The current protocol communication target component
+    bool read_to_view_only;                         ///< If true, then all incoming waypoints will only be shown in "view" tab. If false, then in both "edit" and "view" tabs.
 
     QVector<Waypoint *> waypoints;                  ///< local waypoint list (main storage)
+    QVector<Waypoint *> waypoints_readonly;         ///< (should be) exact copy of waypoint list running on the vehicle
     Waypoint* currentWaypoint;                      ///< The currently used waypoint
     QVector<mavlink_waypoint_t *> waypoint_buffer;  ///< buffer for waypoints during communication
     QTimer protocol_timer;                          ///< Timer to catch timeouts

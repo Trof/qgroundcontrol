@@ -27,6 +27,9 @@
 #include "LinkManager.h"
 #include "SerialLink.h"
 
+#define CMD_HALT 51                 ///< ID for Command Mavlink message
+#define CMD_CONTINUE 52             ///< ID for Command Mavlink message
+
 UAS::UAS(MAVLinkProtocol* protocol, int id) : UASInterface(),
 uasId(id),
 startTime(QGC::groundTimeMilliseconds()),
@@ -879,6 +882,26 @@ void UAS::receiveMessage(LinkInterface* link, mavlink_message_t message)
                 mavlink_waypoint_current_t wpc;
                 mavlink_msg_waypoint_current_decode(&message, &wpc);
                 waypointManager.handleWaypointCurrent(message.sysid, message.compid, &wpc);
+            }
+            break;
+
+        case MAVLINK_MSG_ID_COMMAND_ACK:
+            {
+                mavlink_command_ack_t cmda;
+                mavlink_msg_command_ack_decode(&message, &cmda);
+
+                if (cmda.command == CMD_HALT)
+                {
+                    if (cmda.result == 0) qDebug() << "Halt request confirmed";
+                }
+                if (cmda.command == CMD_CONTINUE)
+                {
+                    if (cmda.result == 0) qDebug() << "Continue request confirmed";
+                }
+                else
+                {
+                waypointManager.handleCommandAck(message.sysid, message.compid, &cmda);
+                }
             }
             break;
 
@@ -2099,16 +2122,42 @@ void UAS::halt()
     // Send message twice to increase chance of reception
     sendMessage(msg);
     sendMessage(msg);
+    mavlink_message_t message;
+    mavlink_command_t halt;
+
+    halt.target_system = this->getUASID();
+    halt.target_component = MAV_COMP_ID_WAYPOINTPLANNER;
+    halt.command = CMD_HALT;
+
+    mavlink_msg_command_encode(mavlink->getSystemId(), mavlink->getComponentId(), &message, &halt);
+    this->sendMessage(message);
+
+    qDebug() << "Sent command to halt the flight to ID " << halt.target_system;
+
 }
 
 void UAS::go()
 {
+
     mavlink_message_t msg;
     // TODO Replace MG System ID with static function call and allow to change ID in GUI
     mavlink_msg_action_pack(MG::SYSTEM::ID, MG::SYSTEM::COMPID, &msg, this->getUASID(), MAV_COMP_ID_IMU,  (int)MAV_ACTION_CONTINUE);
     // Send message twice to increase chance of reception
     sendMessage(msg);
     sendMessage(msg);
+
+
+    mavlink_message_t message;
+    mavlink_command_t go;
+
+    go.target_system = this->getUASID();
+    go.target_component = MAV_COMP_ID_WAYPOINTPLANNER;
+    go.command = CMD_CONTINUE;
+
+    mavlink_msg_command_encode(mavlink->getSystemId(), mavlink->getComponentId(), &message, &go);
+    this->sendMessage(message);
+
+    qDebug() << "Sent command to continue the flight to ID " << go.target_system;
 }
 
 /** Order the robot to return home / to land on the runway **/
