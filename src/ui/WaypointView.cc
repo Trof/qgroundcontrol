@@ -361,7 +361,7 @@ void WaypointView::changedCurrent(int state)
     if (state == 0) {
         m_ui->selectedBox->setChecked(true);
         m_ui->selectedBox->setCheckState(Qt::Checked);
-        wp->setCurrent(false);
+        wp->setCurrent(false); //FIXME: delete this line? isn't this the case, where user is clicking on a waypoint, which is already "current" ? => shouldn't set "current" to false, otherwise have list without "current".
     } else {
         wp->setCurrent(true);
         emit changeCurrentWaypoint(wp->getId());   //the slot changeCurrentWaypoint() in WaypointList sets all other current flags to false
