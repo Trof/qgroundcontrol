@@ -218,14 +218,53 @@ void UASWaypointManager::handleWaypoint(quint8 systemId, quint8 compId, mavlink_
 void UASWaypointManager::handleWaypointAck(quint8 systemId, quint8 compId, mavlink_mission_ack_t *wpa)
 {
     if (systemId == current_partner_systemid && compId == current_partner_compid) {
-        if((current_state == WP_SENDLIST || current_state == WP_SENDLIST_SENDWPS) && (current_wp_id == waypoint_buffer.count()-1 && wpa->type == 0)) {
+        if((current_state == WP_SENDLIST || current_state == WP_SENDLIST_SENDWPS) && (current_wp_id == waypoint_buffer.count()-1 && wpa->type == MAV_MISSION_ACCEPTED)) {
             //all waypoints sent and ack received
             protocol_timer.stop();
             current_state = WP_IDLE;
             readWaypoints(false); //Update "Onboard Waypoints"-tab immidiately after the waypoint list has been sent.
             emit updateStatusString("done.");
             // // qDebug() << "sent all waypoints to ID " << systemId;
-        } else if(current_state == WP_CLEARLIST) {
+        }
+        else if((current_state == WP_SENDLIST || current_state == WP_SENDLIST_SENDWPS) && wpa->type != MAV_MISSION_ACCEPTED)
+        {
+        switch (wpa->type)
+        {
+        case MAV_MISSION_ERROR: emit updateStatusString("ERROR. Not accepting Missions right now.");
+            break;
+        case MAV_MISSION_UNSUPPORTED_FRAME: emit updateStatusString("ERROR. Unsupported frame.");
+            break;
+        case MAV_MISSION_UNSUPPORTED: emit updateStatusString("ERROR. Unsupported mission command.");
+            break;
+        case MAV_MISSION_NO_SPACE: emit updateStatusString("ERROR. Not enough space to accept mission.");
+            break;
+        case MAV_MISSION_INVALID: emit updateStatusString("ERROR. Invalid mission parameters.");
+            break;
+        case MAV_MISSION_INVALID_PARAM1: emit updateStatusString("ERROR. Invalid value of mission param1.");
+            break;
+        case MAV_MISSION_INVALID_PARAM2: emit updateStatusString("ERROR. Invalid value of mission param2.");
+            break;
+        case MAV_MISSION_INVALID_PARAM3: emit updateStatusString("ERROR. Invalid value of mission param3.");
+            break;
+        case MAV_MISSION_INVALID_PARAM4: emit updateStatusString("ERROR. Invalid value of mission param4.");
+            break;
+        case MAV_MISSION_INVALID_PARAM5_X: emit updateStatusString("ERROR. Invalid value of mission param5.");
+            break;
+        case MAV_MISSION_INVALID_PARAM6_Y: emit updateStatusString("ERROR. Invalid value of mission param6.");
+            break;
+        case MAV_MISSION_INVALID_PARAM7: emit updateStatusString("ERROR. Invalid value of mission param7.");
+            break;
+        case MAV_MISSION_INVALID_SEQUENCE: emit updateStatusString("ERROR. Received waypoint out of sequence.");
+            break;
+        case MAV_MISSION_DENIED: emit updateStatusString("ERROR. Not accepting missions from this communication partner.");
+            break;
+        }
+            protocol_timer.stop();
+            current_state = WP_IDLE;
+            readWaypoints(false); //Update "Onboard Waypoints"-tab immidiately after the waypoint list has been sent.
+        }
+        else if(current_state == WP_CLEARLIST)
+        {
             protocol_timer.stop();
             current_state = WP_IDLE;
             emit updateStatusString("done.");
